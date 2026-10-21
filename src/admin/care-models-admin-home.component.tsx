@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   Button,
   DataTable,
+  DataTableSkeleton,
   Dropdown,
-  InlineLoading,
   InlineNotification,
+  Link,
   Modal,
   Pagination,
-  Search,
   Stack,
   Table,
   TableBody,
@@ -17,30 +17,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Search,
   Tag,
   TextArea,
   TextInput,
-  OverflowMenu,
-  OverflowMenuItem,
+  Tile,
 } from '@carbon/react';
-import { Add } from '@carbon/react/icons';
-import { ErrorState, UserHasAccess } from '@openmrs/esm-framework';
-import {
-  changeModelStatus,
-  duplicateModel,
-  fetchEnvelope,
-  importModel,
-  publishModel,
-  useRegistry,
-  validateDefinition,
-} from '../api/caremodels.resource';
+import { Add, Copy, Download, Edit, Group, Pause, Play, Upload } from '@carbon/react/icons';
+import { UserHasAccess } from '@openmrs/esm-framework';
+import { changeModelStatus, duplicateModel, fetchEnvelope, importModel, useRegistry } from '../api/caremodels.resource';
 import { parseEnvelope } from '../api/contract';
-import { navigateToCareModelAdmin } from '../utils/care-model-navigation';
+import { careModelAdminUrl, navigateToCareModelAdmin } from '../utils/care-model-navigation';
 import type { RegistryModel } from '../types/caremodels';
 import { PrivilegeSelector } from './privilege-selector.component';
+import { CareModelsRegistryHeader } from './care-models-registry-header.component';
 import styles from './care-models-admin-home.scss';
 
-type RegistryAction = 'duplicate' | 'import' | 'publish' | 'deactivate' | 'reactivate';
+type RegistryAction = 'duplicate' | 'import' | 'deactivate' | 'reactivate';
+type StatusFilter = 'ALL' | RegistryModel['status'];
+const modelStatus = (model: RegistryModel) => (model.retired ? 'RETIRED' : model.status);
+
 export default function CareModelsAdminHome() {
   return (
     <UserHasAccess privilege="Task: caremodels.model.manage">
@@ -53,12 +49,18 @@ function Registry() {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('ALL');
   useEffect(() => {
     const timer = setTimeout(() => setQuery(search.trim()), 250);
     return () => clearTimeout(timer);
   }, [search]);
-  const { data: models, error, isLoading, mutate } = useRegistry(query);
-  const [status, setStatus] = useState('ALL');
+  // Java retirement uses a separate flag; status=RETIRED alone can miss retired published models.
+  const {
+    data: models,
+    error,
+    isLoading,
+    mutate,
+  } = useRegistry(query, status === 'ALL' || status === 'RETIRED' ? undefined : status);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [dialog, setDialog] = useState<{ action: RegistryAction; model?: RegistryModel } | null>(null);
@@ -68,13 +70,12 @@ function Registry() {
   const [name, setName] = useState('');
   const [privilege, setPrivilege] = useState('');
   const [json, setJson] = useState('');
-  const [version, setVersion] = useState('');
   const filtered = useMemo(
     () =>
       (models ?? []).filter(
         (model) =>
-          (status === 'ALL' || model.status === status) &&
-          `${model.code} ${model.name}`.toLowerCase().includes(search.trim().toLowerCase()),
+          (status === 'ALL' || modelStatus(model) === status) &&
+          `${model.name} ${model.code}`.toLowerCase().includes(search.trim().toLowerCase()),
       ),
     [models, status, search],
   );
@@ -83,48 +84,44 @@ function Registry() {
     id: model.uuid,
     name: model.name,
     code: model.code,
-    status: model.status,
+    status: modelStatus(model),
     privilege: model.privilege,
     revision: model.revision,
   }));
   const headers = [
-    { key: 'name', header: t('modelName', 'Model') },
+    { key: 'name', header: t('name', 'Name') },
     { key: 'code', header: t('modelCode', 'Code') },
     { key: 'status', header: t('status', 'Status') },
-    { key: 'privilege', header: t('requiredPrivilege', 'Required privilege') },
+    { key: 'privilege', header: t('registryViewingPrivilege', 'Required viewing privilege') },
     { key: 'revision', header: t('revision', 'Revision') },
   ];
+  const statusLabels: Record<StatusFilter, string> = {
+    ALL: t('allStatuses', 'All statuses'),
+    DRAFT: t('registryDraft', 'Draft'),
+    PUBLISHED: t('registryPublished', 'Published'),
+    INACTIVE: t('registryInactive', 'Inactive'),
+    RETIRED: t('registryRetired', 'Retired'),
+  };
+  const hasFilters = Boolean(search.trim()) || status !== 'ALL';
+  const loading = isLoading || query !== search.trim();
   const open = (action: RegistryAction, model?: RegistryModel) => {
     setCode('');
     setName('');
     setPrivilege('');
     setJson('');
-    setVersion('');
     setMessage(null);
     setDialog({ action, model });
   };
+  const clearFilters = () => {
+    setSearch('');
+    setStatus('ALL');
+    setPage(1);
+  };
   const report = (error: unknown) =>
     setMessage({ kind: 'error', text: error instanceof Error ? error.message : String(error) });
-  const validate = async (model: RegistryModel) => {
-    setBusy(true);
-    setMessage(null);
-    try {
-      const envelope = parseEnvelope((await fetchEnvelope(model.code)).envelope);
-      const result = await validateDefinition((envelope.draft ?? envelope.published)!.definition);
-      setMessage({
-        kind: result.valid ? 'success' : 'error',
-        text: result.valid
-          ? t('validationPassed', 'Definition is valid')
-          : (result.validationErrors ?? t('validationFailed', 'Definition is invalid')),
-      });
-    } catch (error) {
-      report(error);
-    } finally {
-      setBusy(false);
-    }
-  };
   const exportModel = async (model: RegistryModel) => {
     setBusy(true);
+    setMessage(null);
     try {
       const envelope = parseEnvelope((await fetchEnvelope(model.code)).envelope);
       const url = URL.createObjectURL(new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' }));
@@ -148,12 +145,7 @@ function Registry() {
         throw new Error(t('reservedCode', 'The code new is reserved for model creation. Choose another code.'));
       if (dialog.action === 'duplicate') await duplicateModel(dialog.model!.code, code.trim(), name.trim(), privilege);
       else if (dialog.action === 'import') await importModel(code.trim(), name.trim(), privilege, parseEnvelope(json));
-      else if (dialog.action === 'publish') {
-        const envelope = parseEnvelope((await fetchEnvelope(dialog.model!.code)).envelope);
-        if (!envelope.draft) throw new Error(t('noDraft', 'There is no draft to publish.'));
-        const result = await publishModel(dialog.model!.code, version, envelope.revision);
-        if (result.conflict) throw new Error(t('staleRevisionShort', 'Draft changed elsewhere; reload and retry.'));
-      } else await changeModelStatus(dialog.model!.code, dialog.action);
+      else await changeModelStatus(dialog.model!.code, dialog.action);
       setDialog(null);
       await mutate();
       setMessage({ kind: 'success', text: t('operationSucceeded', 'Care model updated') });
@@ -164,199 +156,331 @@ function Registry() {
     }
   };
   const requiresIdentity = dialog?.action === 'duplicate' || dialog?.action === 'import';
+  const dialogTitles: Record<RegistryAction, string> = {
+    duplicate: t('duplicateCareModel', 'Duplicate Care Model'),
+    import: t('importCareModel', 'Import Care Model'),
+    deactivate: t('deactivateCareModel', 'Deactivate Care Model'),
+    reactivate: t('reactivateCareModel', 'Reactivate Care Model'),
+  };
   return (
     <div className={styles.container}>
-      <h2>{t('careModels', 'Care Models')}</h2>
-      <p className={styles.subtitle}>{t('careModelsAdminSubtitle', 'Create, manage and publish care models.')}</p>
-      {message && (
-        <InlineNotification kind={message.kind} title={message.text} onCloseButtonClick={() => setMessage(null)} />
-      )}
-      <div className={styles.filtersRow}>
-        <Search
-          labelText={t('search', 'Search')}
-          placeholder={t('searchCareModels', 'Search care models…')}
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
-        <Dropdown
-          id="status-filter"
-          titleText={t('status', 'Status')}
-          label={t('status', 'Status')}
-          items={['ALL', 'DRAFT', 'PUBLISHED', 'INACTIVE', 'RETIRED']}
-          selectedItem={status}
-          onChange={({ selectedItem }) => {
-            setStatus(selectedItem ?? 'ALL');
-            setPage(1);
-          }}
-        />
-        <Button kind="tertiary" onClick={() => open('import')} disabled={busy}>
-          {t('importModel', 'Import')}
-        </Button>
-        <Button renderIcon={Add} onClick={() => navigateToCareModelAdmin('new')}>
-          {t('newCareModel', 'New Care Model')}
-        </Button>
-      </div>
-      {isLoading ? (
-        <InlineLoading description={t('loading', 'Loading…')} />
-      ) : error ? (
-        <ErrorState headerTitle={t('careModels', 'Care Models')} error={error} />
-      ) : (
-        <>
-          <DataTable rows={rows} headers={headers}>
-            {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
+      <CareModelsRegistryHeader />
+      <section className={styles.content} aria-label={t('careModelsRegistry', 'Care Models registry')}>
+        <Stack gap={4}>
+          {message && !dialog && (
+            <InlineNotification kind={message.kind} title={message.text} onCloseButtonClick={() => setMessage(null)} />
+          )}
+          <div className={styles.tablePanel}>
+            <section className={styles.toolbar} aria-label={t('registryToolbar', 'Registry controls')}>
+              <div className={styles.controls}>
+                <div className={styles.filterRow}>
+                  <Dropdown
+                    id="status-filter"
+                    size="lg"
+                    titleText={t('filterBy', 'Filter by')}
+                    label={t('allStatuses', 'All statuses')}
+                    items={Object.keys(statusLabels) as Array<StatusFilter>}
+                    itemToString={(item) => (item ? statusLabels[item] : '')}
+                    selectedItem={status}
+                    onChange={({ selectedItem }) => {
+                      setStatus(selectedItem ?? 'ALL');
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                <Search
+                  className={styles.search}
+                  size="lg"
+                  labelText={t('searchCareModelsLabel', 'Search care models')}
+                  placeholder={t('searchCareModels', 'Search care models…')}
+                  value={search}
+                  onChange={(event) => {
+                    if (event && 'target' in event) {
+                      setSearch(event.target.value);
+                      setPage(1);
+                    }
+                  }}
+                />
+                <Button kind="tertiary" renderIcon={Upload} onClick={() => open('import')} disabled={busy}>
+                  {t('importModel', 'Import')}
+                </Button>
+                <Button renderIcon={Add} onClick={() => navigateToCareModelAdmin('new')}>
+                  {t('createNewCareModel', 'Create New Care Model')}
+                </Button>
+              </div>
+            </section>
+            {error ? (
+              <div className={styles.errorState}>
+                <InlineNotification
+                  kind="error"
+                  lowContrast
+                  hideCloseButton
+                  title={t('registryLoadError', 'Could not load Care Models')}
+                  subtitle={t('registryLoadErrorDescription', 'Check your access and connection, then try again.')}
+                />
+                <Button kind="tertiary" onClick={() => void mutate().catch(report)}>
+                  {t('retry', 'Retry')}
+                </Button>
+              </div>
+            ) : loading ? (
+              <DataTableSkeleton
+                columnCount={6}
+                rowCount={10}
+                showHeader={false}
+                showToolbar={false}
+                headers={headers}
+                aria-label={t('loadingCareModels', 'Loading Care Models')}
+              />
+            ) : !filtered.length ? (
               <TableContainer>
-                <Table {...getTableProps()}>
-                  <TableHead>
-                    <TableRow>
-                      {headers.map((header) => {
-                        const { key, ...props } = getHeaderProps({ header });
-                        return (
-                          <TableHeader key={key} {...props}>
-                            {header.header}
-                          </TableHeader>
-                        );
-                      })}
-                      <TableHeader>{t('actions', 'Actions')}</TableHeader>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row) => {
-                      const model = models?.find((item) => item.uuid === row.id);
-                      if (!model) return null;
-                      const { key, ...props } = getRowProps({ row });
-                      return (
-                        <TableRow key={key} {...props}>
-                          {row.cells.map((cell) => (
-                            <TableCell key={cell.id}>
-                              {cell.info.header === 'status' ? (
-                                <Tag type={cell.value === 'PUBLISHED' ? 'green' : 'gray'}>{String(cell.value)}</Tag>
-                              ) : (
-                                cell.value
-                              )}
-                            </TableCell>
-                          ))}
-                          <TableCell>
-                            <Button kind="ghost" size="sm" onClick={() => navigateToCareModelAdmin(model.code)}>
-                              {t('edit', 'Edit')}
-                            </Button>
-                            <OverflowMenu
-                              aria-label={`${t('actions', 'Actions')}: ${model.name}`}
-                              iconDescription={`${t('actions', 'Actions')}: ${model.name}`}
-                              disabled={busy}
-                              flipped>
-                              <OverflowMenuItem
-                                itemText={t('duplicate', 'Duplicate published model')}
-                                disabled={model.status === 'DRAFT' || model.retired}
-                                onClick={() => open('duplicate', model)}
-                              />
-                              <OverflowMenuItem
-                                itemText={t('validate', 'Validate')}
-                                onClick={() => void validate(model)}
-                              />
-                              <OverflowMenuItem
-                                itemText={t('exportModel', 'Export configuration')}
-                                onClick={() => void exportModel(model)}
-                              />
-                              <UserHasAccess privilege="Task: caremodels.model.publish">
-                                <OverflowMenuItem
-                                  itemText={t('publish', 'Publish')}
-                                  disabled={model.retired}
-                                  onClick={() => open('publish', model)}
-                                />
-                              </UserHasAccess>
-                              <OverflowMenuItem
-                                itemText={
-                                  model.status === 'INACTIVE'
-                                    ? t('reactivate', 'Reactivate')
-                                    : t('deactivate', 'Deactivate')
-                                }
-                                disabled={model.retired || !['PUBLISHED', 'INACTIVE'].includes(model.status)}
-                                onClick={() => open(model.status === 'INACTIVE' ? 'reactivate' : 'deactivate', model)}
-                              />
-                            </OverflowMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                {!rows.length && (
-                  <p className={styles.emptyState}>{t('noRegistryModels', 'No care models match these filters.')}</p>
-                )}
+                <div className={styles.tableRegion}>
+                  <Table size="sm">
+                    <TableHead>
+                      <TableRow>
+                        {headers.map((header) => (
+                          <TableHeader key={header.key}>{header.header}</TableHeader>
+                        ))}
+                        <TableHeader>{t('actions', 'Actions')}</TableHeader>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={6} className={styles.emptyCell}>
+                          <Tile className={styles.emptyState}>
+                            <Group size={64} aria-hidden />
+                            <h2>
+                              {hasFilters
+                                ? t('noRegistryFilterMatches', 'No Care Models match these filters.')
+                                : t('noCareModelsAvailable', 'No Care Models available')}
+                            </h2>
+                            <p>
+                              {hasFilters
+                                ? t('clearRegistryFiltersHint', 'Try another search or clear your filters.')
+                                : t(
+                                    'createCareModelHint',
+                                    'Create a Care Model to configure specialized clinical workspaces for enrolled patients.',
+                                  )}
+                            </p>
+                            {hasFilters && (
+                              <Button kind="tertiary" onClick={clearFilters}>
+                                {t('clearSearchAndFilters', 'Clear search and filters')}
+                              </Button>
+                            )}
+                          </Tile>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </TableContainer>
+            ) : (
+              <>
+                <div
+                  className={styles.tableRegion}
+                  role="region"
+                  aria-label={t('careModelsTable', 'Care Models table')}
+                  tabIndex={0}>
+                  <DataTable rows={rows} headers={headers} size="sm" useZebraStyles>
+                    {({ rows: tableRows, headers, getTableProps, getHeaderProps, getRowProps }) => (
+                      <TableContainer>
+                        <Table {...getTableProps()} size="sm" useZebraStyles>
+                          <TableHead>
+                            <TableRow>
+                              {headers.map((header) => {
+                                const { key, ...props } = getHeaderProps({ header });
+                                return (
+                                  <TableHeader key={key} {...props}>
+                                    {header.header}
+                                  </TableHeader>
+                                );
+                              })}
+                              <TableHeader>{t('actions', 'Actions')}</TableHeader>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {tableRows.map((row) => {
+                              const model = models?.find((model) => model.uuid === row.id);
+                              if (!model) return null;
+                              const { key, ...props } = getRowProps({ row });
+                              const duplicateUnavailable = model.status === 'DRAFT' || model.retired;
+                              const lifecycleUnavailable =
+                                model.retired || !['PUBLISHED', 'INACTIVE'].includes(model.status);
+                              const reactivate = model.status === 'INACTIVE';
+                              const duplicateLabel = duplicateUnavailable
+                                ? t('duplicateUnavailable', 'Duplicate unavailable for unpublished or retired models')
+                                : t('duplicateModelName', 'Duplicate {{name}}', { name: model.name });
+                              const lifecycleLabel = lifecycleUnavailable
+                                ? t(
+                                    'lifecycleUnavailable',
+                                    'Availability changes require a published, non-retired model',
+                                  )
+                                : reactivate
+                                  ? t('reactivateModelName', 'Reactivate {{name}}', { name: model.name })
+                                  : t('deactivateModelName', 'Deactivate {{name}}', { name: model.name });
+                              return (
+                                <TableRow key={key} {...props}>
+                                  {row.cells.map((cell) => (
+                                    <TableCell
+                                      key={cell.id}
+                                      className={cell.info.header === 'privilege' ? styles.privilegeCell : undefined}>
+                                      {cell.info.header === 'name' ? (
+                                        <div className={styles.modelIdentity}>
+                                          <Link
+                                            href={careModelAdminUrl(model.code)}
+                                            onClick={(event) => {
+                                              if (
+                                                event.button === 0 &&
+                                                !event.metaKey &&
+                                                !event.ctrlKey &&
+                                                !event.shiftKey &&
+                                                !event.altKey
+                                              ) {
+                                                event.preventDefault();
+                                                navigateToCareModelAdmin(model.code);
+                                              }
+                                            }}>
+                                            {model.name}
+                                          </Link>
+                                          {model.description && (
+                                            <p className={styles.modelDescription}>{model.description}</p>
+                                          )}
+                                        </div>
+                                      ) : cell.info.header === 'status' ? (
+                                        <Tag
+                                          type={
+                                            cell.value === 'PUBLISHED'
+                                              ? 'green'
+                                              : cell.value === 'INACTIVE'
+                                                ? 'warm-gray'
+                                                : 'gray'
+                                          }
+                                          size="sm">
+                                          {statusLabels[String(cell.value) as StatusFilter]}
+                                        </Tag>
+                                      ) : cell.info.header === 'privilege' ? (
+                                        <span title={model.privilege}>{model.privilege}</span>
+                                      ) : (
+                                        cell.value
+                                      )}
+                                    </TableCell>
+                                  ))}
+                                  <TableCell>
+                                    <div className={styles.rowActions}>
+                                      <Button
+                                        kind="ghost"
+                                        size="sm"
+                                        hasIconOnly
+                                        renderIcon={Edit}
+                                        iconDescription={t('editModelName', 'Edit {{name}}', { name: model.name })}
+                                        onClick={() => navigateToCareModelAdmin(model.code)}
+                                      />
+                                      <Button
+                                        kind="ghost"
+                                        size="sm"
+                                        hasIconOnly
+                                        renderIcon={Download}
+                                        disabled={busy}
+                                        iconDescription={t('exportModelName', 'Export {{name}}', { name: model.name })}
+                                        onClick={() => void exportModel(model)}
+                                      />
+                                      <Button
+                                        kind="ghost"
+                                        size="sm"
+                                        hasIconOnly
+                                        renderIcon={Copy}
+                                        disabled={busy || duplicateUnavailable}
+                                        iconDescription={duplicateLabel}
+                                        title={duplicateLabel}
+                                        onClick={() => open('duplicate', model)}
+                                      />
+                                      <Button
+                                        kind="ghost"
+                                        size="sm"
+                                        hasIconOnly
+                                        renderIcon={reactivate ? Play : Pause}
+                                        disabled={busy || lifecycleUnavailable}
+                                        iconDescription={lifecycleLabel}
+                                        title={lifecycleLabel}
+                                        onClick={() => open(reactivate ? 'reactivate' : 'deactivate', model)}
+                                      />
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    )}
+                  </DataTable>
+                </div>
+              </>
             )}
-          </DataTable>
-          <Pagination
-            page={currentPage}
-            pageSize={pageSize}
-            pageSizes={[10, 20, 50]}
-            totalItems={filtered.length}
-            onChange={({ page, pageSize }) => {
-              setPage(page);
-              setPageSize(pageSize);
-            }}
-          />
-        </>
-      )}
-      <Modal
-        open={Boolean(dialog)}
-        modalHeading={dialog ? t(dialog.action, dialog.action) : ''}
-        primaryButtonText={busy ? t('working', 'Working…') : t('confirm', 'Confirm')}
-        secondaryButtonText={t('cancel', 'Cancel')}
-        primaryButtonDisabled={
-          busy ||
-          (requiresIdentity && (!code.trim() || !name.trim() || !privilege)) ||
-          (dialog?.action === 'publish' && !/^\d+\.\d+\.\d+$/.test(version)) ||
-          (dialog?.action === 'import' && !json.trim())
-        }
-        onRequestClose={() => !busy && setDialog(null)}
-        onRequestSubmit={() => void submit()}
-        preventCloseOnClickOutside>
-        <Stack gap={5}>
-          {requiresIdentity && (
-            <>
-              <TextInput
-                id="registry-code"
-                labelText={t('modelCode', 'Code')}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
+            {!error && !loading && (
+              <Pagination
+                className={styles.pagination}
+                page={currentPage}
+                pageSize={pageSize}
+                pageSizes={[10, 20, 50]}
+                totalItems={filtered.length}
+                itemsPerPageText={t('itemsPerPage', 'Items per page:')}
+                onChange={({ page, pageSize }) => {
+                  setPage(page);
+                  setPageSize(pageSize);
+                }}
               />
-              <TextInput
-                id="registry-name"
-                labelText={t('modelName', 'Name')}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <PrivilegeSelector value={privilege} onChange={setPrivilege} />
-            </>
-          )}
-          {dialog?.action === 'import' && (
-            <TextArea
-              id="registry-envelope"
-              labelText={t('importEnvelope', 'Storage envelope JSON')}
-              value={json}
-              onChange={(e) => setJson(e.target.value)}
-              rows={8}
-            />
-          )}
-          {dialog?.action === 'publish' && (
-            <TextInput
-              id="registry-version"
-              labelText={t('releaseVersion', 'Release version')}
-              placeholder="1.0.0"
-              value={version}
-              onChange={(e) => setVersion(e.target.value)}
-            />
-          )}
-          {(dialog?.action === 'deactivate' || dialog?.action === 'reactivate') && (
-            <p>{t('confirmLifecycle', 'Change the local availability of {{name}}?', { name: dialog.model?.name })}</p>
-          )}
-          {message?.kind === 'error' && <InlineNotification kind="error" title={message.text} hideCloseButton />}
+            )}
+          </div>
         </Stack>
-      </Modal>
+      </section>
+      {dialog && (
+        <Modal
+          open
+          modalHeading={dialogTitles[dialog.action]}
+          primaryButtonText={busy ? t('working', 'Working…') : t('confirm', 'Confirm')}
+          secondaryButtonText={t('cancel', 'Cancel')}
+          primaryButtonDisabled={
+            busy ||
+            (requiresIdentity && (!code.trim() || !name.trim() || !privilege)) ||
+            (dialog.action === 'import' && !json.trim())
+          }
+          onRequestClose={() => !busy && setDialog(null)}
+          onRequestSubmit={() => void submit()}
+          preventCloseOnClickOutside>
+          <Stack gap={5}>
+            {requiresIdentity && (
+              <>
+                <TextInput
+                  id="registry-code"
+                  labelText={t('modelCode', 'Code')}
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                />
+                <TextInput
+                  id="registry-name"
+                  labelText={t('modelName', 'Name')}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+                <PrivilegeSelector value={privilege} onChange={setPrivilege} />
+              </>
+            )}
+            {dialog.action === 'import' && (
+              <TextArea
+                id="registry-envelope"
+                labelText={t('importEnvelope', 'Storage envelope JSON')}
+                value={json}
+                onChange={(event) => setJson(event.target.value)}
+                rows={8}
+              />
+            )}
+            {(dialog.action === 'deactivate' || dialog.action === 'reactivate') && (
+              <p>{t('confirmLifecycle', 'Change the local availability of {{name}}?', { name: dialog.model?.name })}</p>
+            )}
+            {message?.kind === 'error' && <InlineNotification kind="error" title={message.text} hideCloseButton />}
+          </Stack>
+        </Modal>
+      )}
     </div>
   );
 }

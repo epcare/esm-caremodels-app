@@ -1,6 +1,13 @@
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import useSWR, { useSWRConfig } from 'swr';
-import { isAuthorizationError, parseDataResult, parseWorkspace, patientRequestOptions } from './contract';
+import {
+  isAuthorizationError,
+  nextRestPage,
+  parseDataResult,
+  parseWorkspace,
+  patientRequestOptions,
+  type RestCollection,
+} from './contract';
 import { careModelsBaseUrl, masterPrivilege } from '../constants';
 import type {
   CareModelMembership,
@@ -28,10 +35,18 @@ export function hasMasterPrivilege(session: CareModelsSession | undefined): bool
 }
 
 export async function fetchMemberships(patientUuid: string): Promise<Array<CareModelMembership>> {
-  const { data } = await openmrsFetch<{ results: Array<CareModelMembership> }>(
-    `${careModelsBaseUrl}/membership?patient=${encodeURIComponent(patientUuid)}&v=default`,
-  );
-  return data.results ?? [];
+  const memberships = new Map<string, CareModelMembership>();
+  let startIndex = 0;
+  for (;;) {
+    const { data } = await openmrsFetch<RestCollection<CareModelMembership>>(
+      `${careModelsBaseUrl}/membership?patient=${encodeURIComponent(patientUuid)}&v=default${startIndex ? `&startIndex=${startIndex}` : ''}`,
+    );
+    for (const membership of data.results ?? [])
+      memberships.set(membership.memberUuid ?? membership.modelCode, membership);
+    const next = nextRestPage(data, startIndex);
+    if (next === null) return Array.from(memberships.values());
+    startIndex = next;
+  }
 }
 
 export async function fetchWorkspaceTab(
@@ -81,14 +96,14 @@ export function useMemberships(patientUuid: string | null, enabled: boolean) {
 }
 
 /** Admin registry listing; requires the manage privilege server-side. */
-export async function fetchRegistryModels(q: string): Promise<Array<RegistryModel>> {
+export async function fetchRegistryModels(q: string, status?: RegistryModel['status']): Promise<Array<RegistryModel>> {
   // Request cumulative prefixes: the supplied Java resource paginates in both the DAO
   // and NeedsPaging. Keeping startIndex=0 avoids applying the offset twice.
   let limit = 100;
   let previousLength = -1;
   for (;;) {
     const { data } = await openmrsFetch<{ results: Array<RegistryModel>; links?: Array<{ rel: string }> }>(
-      `${careModelsBaseUrl}/model?includeRetired=true&v=default&startIndex=0&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+      `${careModelsBaseUrl}/model?includeRetired=true&v=default&startIndex=0&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}${status ? `&status=${encodeURIComponent(status)}` : ''}`,
     );
     const results = data.results ?? [];
     if (results.length < limit && !data.links?.some((link) => link.rel === 'next')) return results;
@@ -99,13 +114,20 @@ export async function fetchRegistryModels(q: string): Promise<Array<RegistryMode
   }
 }
 
-export function useRegistry(q = '') {
-  return useSWR(['caremodels-registry', q], () => fetchRegistryModels(q), { shouldRetryOnError: false });
+export function useRegistry(q = '', status?: RegistryModel['status']) {
+  return useSWR(['caremodels-registry', q, status ?? ''], () => fetchRegistryModels(q, status), {
+    shouldRetryOnError: false,
+  });
 }
 
-export function useWorkspaceTab(patientUuid: string, modelCode: string | null, tabId: string | null) {
+export function useWorkspaceTab(
+  patientUuid: string,
+  modelCode: string | null,
+  tabId: string | null,
+  memberUuid?: string,
+) {
   return useSWR<WorkspaceTab>(
-    patientUuid && modelCode ? ['caremodels-workspace', patientUuid, modelCode, tabId ?? ''] : null,
+    patientUuid && modelCode ? ['caremodels-workspace', patientUuid, modelCode, tabId ?? '', memberUuid ?? ''] : null,
     ([, uuid, code, tab]) => fetchWorkspaceTab(uuid as string, code as string, (tab as string) || null),
     patientRequestOptions,
   );
@@ -137,7 +159,18 @@ export function useWidgetData(patientUuid: string, modelCode: string, tabId: str
 // Admin designer operations (POST /ws/rest/v1/caremodels/modeloperation)
 // ========================
 
+/** Writable fields from ModelOperationRequest.java; response-only fields are excluded. */
+export type ModelOperationPayload =
+  | { operation: 'create'; code: string; name: string; description?: string; privilege: string; definition: string }
+  | { operation: 'saveDraft'; code: string; definition: string; expectedRevision: number }
+  | { operation: 'validate'; definition: string }
+  | { operation: 'publish'; code: string; version: string; expectedRevision: number }
+  | { operation: 'envelope' | 'published' | 'deactivate' | 'reactivate'; code: string }
+  | { operation: 'duplicate'; sourceCode: string; newCode: string; newName: string; privilege: string }
+  | { operation: 'import'; code: string; name: string; privilege: string; envelope: string };
+
 export interface OperationResult {
+  name?: string;
   expectedRevision?: number;
   modelCode?: string;
   modelUuid?: string;
@@ -150,7 +183,7 @@ export interface OperationResult {
   envelope?: string;
 }
 
-export async function modelOperation(payload: Record<string, unknown>): Promise<OperationResult> {
+export async function modelOperation(payload: ModelOperationPayload): Promise<OperationResult> {
   const { data } = await openmrsFetch<OperationResult>(`${careModelsBaseUrl}/modeloperation`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -253,22 +286,34 @@ export const formRepresentation =
 
 export async function fetchForms(): Promise<Array<OpenmrsForm>> {
   const forms = new Map<string, OpenmrsForm>();
-  const visited = new Set<number>();
   let startIndex = 0;
   for (;;) {
-    if (visited.has(startIndex)) throw new Error('The forms endpoint returned a repeated page.');
-    visited.add(startIndex);
-    const { data } = await openmrsFetch<{ results: Array<OpenmrsForm>; links?: Array<{ rel: string; uri: string }> }>(
+    const { data } = await openmrsFetch<RestCollection<OpenmrsForm>>(
       `${restBaseUrl}/form?v=${formRepresentation}&includeAll=true${startIndex ? `&startIndex=${startIndex}` : ''}`,
     );
     for (const form of data.results) forms.set(form.uuid, form);
-    const next = data.links?.find((link) => link.rel === 'next');
-    if (!next) return Array.from(forms.values());
-    // Keep the configured API host and representation; use only the REST paging cursor.
-    const cursor = new URL(next.uri, window.location.origin).searchParams.get('startIndex');
-    const nextIndex = cursor === null ? NaN : Number(cursor);
-    if (!Number.isInteger(nextIndex) || nextIndex <= startIndex)
-      throw new Error('The forms endpoint returned an invalid next page.');
-    startIndex = nextIndex;
+    const next = nextRestPage(data, startIndex);
+    if (next === null) return Array.from(forms.values());
+    startIndex = next;
   }
+}
+
+/** Concept metadata used for exact terminology bindings; never a name-to-UUID guess. */
+export interface OpenmrsConcept extends OpenmrsChoice {
+  datatype?: { uuid: string; display: string; name?: string };
+  conceptClass?: { uuid: string; display: string; name?: string };
+  units?: string;
+  answers?: Array<OpenmrsChoice>;
+  mappings?: Array<{
+    display?: string;
+    conceptReferenceTerm?: { code?: string; conceptSource?: { display?: string } };
+  }>;
+}
+export async function searchConcepts(q: string): Promise<Array<OpenmrsConcept>> {
+  const representation =
+    'custom:(uuid,display,datatype:(uuid,display,name),conceptClass:(uuid,display,name),units,answers:(uuid,display),mappings:(display,conceptReferenceTerm:(code,conceptSource:(display))))';
+  const { data } = await openmrsFetch<{ results: Array<OpenmrsConcept> }>(
+    `${restBaseUrl}/concept?q=${encodeURIComponent(q)}&v=${representation}&limit=50`,
+  );
+  return data.results;
 }

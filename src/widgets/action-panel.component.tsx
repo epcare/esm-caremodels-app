@@ -16,10 +16,22 @@ export function ActionPanelWidget({ widget }: { widget: WidgetInstance }) {
   return (
     <div className={styles.actionPanel}>
       <p className={styles.widgetTitle}>{title}</p>
+      {Boolean(widget.properties?.subtitle) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
+      )}
+      {Boolean(widget.properties?.description) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.description)}</p>
+      )}
       {!widget.actionIds?.length && <p>{t('noConfiguredActions', 'No actions configured.')}</p>}
       <ButtonSet>
         {(widget.actionIds ?? []).map((actionId) => (
-          <ActionButton key={actionId} actionId={actionId} label={actionLabel(actionId)} />
+          <ActionButton
+            key={actionId}
+            actionId={actionId}
+            label={String(
+              (widget.properties?.actionLabels as Record<string, string> | undefined)?.[actionId] ?? actionId,
+            )}
+          />
         ))}
       </ButtonSet>
     </div>
@@ -31,10 +43,6 @@ export function ActionPanelWidget({ widget }: { widget: WidgetInstance }) {
  * handler type; until the workspace exposes full action metadata, buttons render disabled rather
  * than guessing at behavior.
  */
-function actionLabel(actionId: string) {
-  return actionId;
-}
-
 function ActionButton({ actionId, label }: { actionId: string; label: string }) {
   const { t } = useTranslation();
   return (

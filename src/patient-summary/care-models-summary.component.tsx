@@ -5,6 +5,7 @@ import { usePatientUuid } from '../utils/use-patient-uuid';
 import { InlineNotification } from '@carbon/react';
 import { hasMasterPrivilege, useMemberships, useSession } from '../api/caremodels.resource';
 import type { CareModelMembership } from '../types/caremodels';
+import { EnrollmentControls } from './enrollment-controls.component';
 import { ModelCards } from './model-cards.component';
 import { ModelWorkspace } from './inner-tabs.component';
 import styles from './care-models-summary.scss';
@@ -42,55 +43,88 @@ export default function CareModelsPatientSummary({ patientUuid: providedUuid }: 
 function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
   const { t } = useTranslation();
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
-  const { data: memberships, error, isLoading } = useMemberships(patientUuid, Boolean(patientUuid));
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const {
+    data: memberships,
+    error,
+    isLoading,
+    isValidating,
+    mutate,
+  } = useMemberships(patientUuid, Boolean(patientUuid));
+  const refresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshFailed(false);
+    try {
+      await mutate();
+    } catch {
+      setRefreshFailed(true);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (!patientUuid)
     return (
       <p className={styles.emptyState}>{t('patientContextUnavailable', 'Open a patient chart to view care models.')}</p>
     );
 
-  if (error) {
+  const controls = (
+    <EnrollmentControls
+      count={!error && !refreshFailed ? memberships?.length : undefined}
+      refreshing={refreshing || Boolean(isLoading || isValidating)}
+      onRefresh={() => void refresh()}
+    />
+  );
+  if (error || refreshFailed) {
     return (
-      <InlineNotification
-        kind="error"
-        lowContrast
-        title={t('careModelsLoadError', 'Could not load Care Models')}
-        subtitle={t('careModelsLoadErrorSubtitle', 'You may not be authorized, or the service is unavailable.')}
-        hideCloseButton
-      />
+      <>
+        {controls}
+        <InlineNotification
+          kind="error"
+          lowContrast
+          title={t('careModelsLoadError', 'Could not load Care Models')}
+          subtitle={t('careModelsLoadErrorSubtitle', 'You may not be authorized, or the service is unavailable.')}
+          hideCloseButton
+        />
+      </>
     );
   }
-
-  if (isLoading) {
-    return <p className={styles.emptyState}>{t('loading', 'Loading…')}</p>;
-  }
-
+  if (isLoading)
+    return (
+      <>
+        {controls}
+        <p className={styles.emptyState}>{t('loading', 'Loading…')}</p>
+      </>
+    );
   const models: Array<CareModelMembership> = memberships ?? [];
-
-  if (models.length === 0) {
+  if (!models.length)
     return (
-      <p className={styles.emptyState}>
-        {t('noEnrolledCareModels', 'This patient is not enrolled in any care model.')}
-      </p>
+      <>
+        {controls}
+        <p className={styles.emptyState}>
+          {t('noEnrolledCareModels', 'This patient is not enrolled in any care model.')}
+        </p>
+      </>
     );
-  }
-
   const selected = models.find((model) => model.modelCode === selectedCode) ?? models[0];
-
   return (
     <>
+      {controls}
       <ModelCards
         models={models.map((model) => ({
           modelUuid: model.modelUuid,
           modelCode: model.modelCode,
           displayLabel: model.displayLabel || model.modelName,
           status: 'Active',
+          episodeNumber: model.episodeNumber,
           since: model.dateEnrolled ? formatDate(model.dateEnrolled) : undefined,
         }))}
         selectedCode={selected.modelCode}
         onSelect={setSelectedCode}
       />
-      <ModelWorkspace key={`${patientUuid}:${selected.modelUuid}`} patientUuid={patientUuid ?? ''} model={selected} />
+      <ModelWorkspace key={`${patientUuid}:${selected.memberUuid}`} patientUuid={patientUuid} model={selected} />
     </>
   );
 }

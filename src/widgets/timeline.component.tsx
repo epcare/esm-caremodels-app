@@ -28,12 +28,20 @@ export function TimelineWidget({
   return (
     <div className={styles.timeline}>
       <p className={styles.widgetTitle}>{title}</p>
+      {Boolean(widget.properties?.subtitle) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
+      )}
+      {Boolean(widget.properties?.description) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.description)}</p>
+      )}
       {error ? (
         <p className={styles.missingData}>{t('dataUnavailable', 'Data unavailable')}</p>
       ) : isLoading ? (
         <p className={styles.missingData}>{t('loading', 'Loading…')}</p>
       ) : values.length === 0 ? (
-        <p className={styles.missingData}>{t('noEvents', 'No events recorded')}</p>
+        <p className={styles.missingData}>
+          {String(widget.properties?.emptyText || t('noEvents', 'No events recorded'))}
+        </p>
       ) : (
         <ol className={styles.trendList}>
           {values.map((value) => (

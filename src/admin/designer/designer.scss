@@ -1,3 +1,6 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+
 .ruleBuilder {
   display: flex;
   flex-direction: column;
@@ -79,59 +82,179 @@
 }
 
 .designer {
-  padding: 1rem;
+  padding: layout.$spacing-06;
+  min-inline-size: 0;
 }
-
 .designerHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: layout.$spacing-05;
+  margin-block: layout.$spacing-06;
 }
-
+.designerTitle {
+  flex: 1 1 20rem;
+  min-inline-size: 0;
+}
+.designerTitle h1 {
+  @include type.type-style('heading-04');
+}
+.moduleLabel {
+  @include type.type-style('body-compact-01');
+  color: var(--cds-text-secondary);
+  margin-block-end: layout.$spacing-02;
+}
+.designerIcon {
+  color: var(--cds-icon-secondary);
+}
+.modelState,
+.headerActions,
+.editorTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: layout.$spacing-03;
+}
+.modelState {
+  margin-block-start: layout.$spacing-03;
+  @include type.type-style('body-compact-01');
+}
 .headerSpacer {
   flex: 1;
 }
-
+.editorLayout {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr) 17rem;
+  align-items: start;
+  gap: layout.$spacing-05;
+  margin-block-start: layout.$spacing-05;
+}
 .stepNav {
-  display: flex;
-  gap: 0.25rem;
   list-style: none;
-  margin: 0 0 1rem;
   padding: 0;
-  border-bottom: 1px solid var(--cds-border-subtle);
-  flex-wrap: wrap;
+  border: 1px solid var(--cds-border-subtle);
+  background: var(--cds-layer-01);
 }
-
-.stepButton {
-  border: none;
-  background: transparent;
-  color: var(--cds-text-secondary);
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
+.stepNav :global(.cds--btn) {
+  inline-size: 100%;
+  max-inline-size: none;
+  justify-content: flex-start;
+  gap: layout.$spacing-04;
+  text-align: start;
+  padding: layout.$spacing-05;
+  min-block-size: layout.$spacing-10;
+  block-size: auto;
 }
-
-.stepActive {
-  color: var(--cds-link-primary);
-  border-bottom-color: var(--cds-link-primary);
-  font-weight: 600;
+.stepNumber {
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  min-inline-size: layout.$spacing-06;
+  block-size: layout.$spacing-06;
+  text-align: center;
+  line-height: layout.$spacing-06;
 }
-
 .stepBody {
-  min-height: 18rem;
+  min-inline-size: 0;
+  border: 1px solid var(--cds-border-subtle);
+  background: var(--cds-layer-01);
+  padding: layout.$spacing-06;
 }
-
-.stepDescription {
+.stepBody > h2 {
+  @include type.type-style('heading-03');
+  margin-block-end: layout.$spacing-05;
+}
+.editorFields {
+  border: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+.generalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: layout.$spacing-06 layout.$spacing-05;
+}
+.fullWidth {
+  grid-column: 1 / -1;
+}
+.summary {
+  display: grid;
+  gap: layout.$spacing-05;
+  min-inline-size: 0;
+}
+.summary h3 {
+  @include type.type-style('heading-compact-01');
+  margin-block-end: layout.$spacing-05;
+}
+.summaryList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: layout.$spacing-05 layout.$spacing-03;
+  @include type.type-style('body-compact-01');
+  overflow-wrap: anywhere;
+}
+.summaryList dt {
   color: var(--cds-text-secondary);
-  margin-bottom: 0.75rem;
 }
-
+.summary :global(.cds--btn) {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+.workspaceLayout {
+  grid-template-columns: 12rem minmax(0, 1fr);
+}
+.workspaceLayout .summary {
+  display: none;
+}
 .wizardFooter {
   display: flex;
-  margin-top: 1rem;
-  border-top: 1px solid var(--cds-border-subtle);
-  padding-top: 0.75rem;
+  gap: layout.$spacing-05;
+  margin-block-start: layout.$spacing-06;
+  padding-block-start: layout.$spacing-05;
+  border-block-start: 1px solid var(--cds-border-subtle);
+}
+.jsonEditor {
+  inline-size: 100%;
+  block-size: 36rem;
+  border: 1px solid var(--cds-border-subtle);
+}
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: layout.$spacing-05;
+}
+.previewWidget {
+  min-inline-size: 0;
+  overflow: auto;
+}
+@media (max-width: 90rem) {
+  .editorLayout {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+  .summary {
+    grid-column: 2;
+  }
+}
+@media (max-width: 42rem) {
+  .designer {
+    padding: layout.$spacing-05;
+  }
+  .editorLayout,
+  .workspaceLayout,
+  .generalGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary {
+    grid-column: auto;
+  }
+  .previewWidget {
+    grid-column: 1 / -1 !important;
+  }
+  .headerActions {
+    inline-size: 100%;
+  }
+  .stepBody {
+    padding: layout.$spacing-05;
+  }
 }
 
 .workspaceStep {
@@ -268,4 +391,51 @@
 
 .designer :global(.cds--inline-notification__subtitle) {
   white-space: pre-wrap;
+}
+
+.sectionHint {
+  display: block;
+  margin-block-start: layout.$spacing-02;
+  @include type.type-style('label-01');
+}
+.sectionDescription {
+  color: var(--cds-text-secondary);
+  margin-block-end: layout.$spacing-06;
+}
+.previewGrid {
+  grid-auto-rows: minmax(4rem, auto);
+}
+
+.stepNav :global(.cds--btn) {
+  white-space: normal;
+}
+
+.canvasControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-block-end: 1px dashed var(--cds-border-subtle);
+  cursor: grab;
+}
+.canvasCard {
+  cursor: default;
+  border-style: dashed;
+}
+.canvasCardSelected {
+  outline: 2px solid var(--cds-border-focus);
+  outline-offset: 2px;
+}
+.palette section > h5 {
+  @include type.type-style('heading-compact-01');
+  margin-block: layout.$spacing-05 layout.$spacing-03;
+}
+.inspector {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.inspector :global(.cds--tab--list) {
+  min-inline-size: 0;
+}
+.inspector :global(.cds--tabs__nav-link) {
+  padding-inline: layout.$spacing-03;
 }

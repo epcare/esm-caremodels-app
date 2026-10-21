@@ -1,22 +1,178 @@
+@use '@carbon/layout';
+@use '@carbon/type';
+
 .container {
-  padding: 1rem;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
-.subtitle {
-  color: var(--cds-text-secondary);
-  margin: 0.5rem 0 1.5rem;
-}
-.filtersRow {
-  display: flex;
-  align-items: end;
+.pageHeader {
+  background: var(--cds-layer-01);
+  border-block-end: 1px solid var(--cds-border-subtle);
+  padding: layout.$spacing-05;
+  block-size: auto;
+  min-block-size: layout.$spacing-12;
+  gap: layout.$spacing-05;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: center;
 }
-.filtersRow > :first-child {
-  flex: 1;
-  min-width: 15rem;
+.headerIdentity {
+  display: flex;
+  gap: layout.$spacing-05;
+  align-items: center;
+}
+.headerIcon {
+  color: var(--cds-icon-secondary);
+  flex-shrink: 0;
+}
+.moduleLabel {
+  @include type.type-style('body-compact-02');
+  color: var(--cds-text-secondary);
+  margin-block-end: layout.$spacing-02;
+}
+.pageTitle {
+  @include type.type-style('heading-04');
+}
+.sessionMetadata {
+  @include type.type-style('body-compact-01');
+  color: var(--cds-text-secondary);
+  display: grid;
+  gap: layout.$spacing-03;
+  text-align: end;
+}
+.sessionLocation {
+  display: flex;
+  gap: layout.$spacing-02;
+  align-items: center;
+}
+.content {
+  padding: layout.$spacing-05;
+  min-inline-size: 0;
+}
+.filterRow {
+  display: flex;
+  align-items: center;
+}
+.tablePanel {
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+.toolbar {
+  margin-block-end: layout.$spacing-06;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: layout.$spacing-05;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+.search {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+.controls > :global(.cds--btn) {
+  flex-shrink: 0;
+}
+.tableRegion {
+  overflow-x: auto;
+  inline-size: 100%;
+}
+.tableRegion :global(.cds--data-table) {
+  min-inline-size: 48rem;
+}
+.tableRegion :global(td),
+.tableRegion :global(th) {
+  overflow-wrap: anywhere;
+}
+.privilegeCell {
+  max-inline-size: 20rem;
+}
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  min-inline-size: 8rem;
 }
 .emptyState {
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-09 layout.$spacing-05;
+  text-align: center;
+}
+.emptyState h2 {
+  @include type.type-style('heading-03');
+}
+.emptyState p {
   color: var(--cds-text-secondary);
+  max-inline-size: 36rem;
+}
+.emptyState > svg {
+  color: var(--cds-icon-secondary);
+}
+.errorState {
+  display: grid;
+  justify-items: start;
+  gap: layout.$spacing-05;
+  padding: layout.$spacing-05;
+}
+.pagination {
+  flex-wrap: wrap;
+}
+@media (max-width: 42rem) {
+  .sessionMetadata {
+    text-align: start;
+  }
+  .search {
+    flex-basis: 100%;
+  }
+  .controls > :global(.cds--btn) {
+    flex: 1;
+  }
+  .pagination :global(.cds--pagination__left),
+  .pagination :global(.cds--pagination__right) {
+    flex-wrap: wrap;
+  }
+}
+
+.filterRow {
+  flex: 0 1 12rem;
+}
+.filterRow > :global(.cds--dropdown__wrapper) {
+  inline-size: 100%;
+}
+.tablePanel {
+  border-block-end: 1px solid var(--cds-border-subtle);
+}
+.modelIdentity {
+  padding-block: layout.$spacing-03;
+}
+.modelIdentity :global(.cds--link) {
+  font-weight: 600;
+}
+.modelDescription {
+  @include type.type-style('label-01');
+  color: var(--cds-text-secondary);
+  margin-block-start: layout.$spacing-02;
+  max-inline-size: 32rem;
+}
+.tableRegion :global(td).emptyCell {
+  padding: 0;
+  white-space: normal;
+}
+.emptyState {
+  min-block-size: 26rem;
+  justify-content: center;
+  background: var(--cds-background);
+}
+
+@media (max-width: 42rem) {
+  .filterRow {
+    flex-basis: 100%;
+  }
+  .emptyState {
+    min-block-size: 22rem;
+  }
 }

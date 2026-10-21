@@ -47,17 +47,24 @@ export function TrendChartWidget({
   return (
     <div className={styles.trendChart}>
       <h4 className={styles.widgetTitle}>{title}</h4>
+      {Boolean(widget.properties?.subtitle) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
+      )}
+      {Boolean(widget.properties?.description) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.description)}</p>
+      )}
       {error ? (
         <p>{t('dataUnavailable', 'Data unavailable')}</p>
       ) : isLoading ? (
         <SkeletonPlaceholder />
       ) : !points.length ? (
-        <p>{t('noChartData', 'No dated numeric measurements recorded')}</p>
+        <p>{String(widget.properties?.emptyText || t('noChartData', 'No dated numeric measurements recorded'))}</p>
       ) : (
         <>
           <CarbonTrendChart
             points={points}
             title={title}
+            unit={String(widget.properties?.unit ?? '')}
             chartType={widget.properties?.chartType === 'bar' ? 'bar' : 'line'}
           />
           <details open={widget.properties?.showDataTable === true}>
@@ -89,10 +96,12 @@ function CarbonTrendChart({
   points,
   title,
   chartType,
+  unit,
 }: {
   points: ReturnType<typeof chartPoints>;
   title: string;
   chartType: 'bar' | 'line';
+  unit: string;
 }) {
   const holder = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
@@ -113,9 +122,9 @@ function CarbonTrendChart({
             animations: false,
             axes: {
               bottom: { mapsTo: 'date', scaleType: ScaleTypes.TIME },
-              left: { mapsTo: 'value', scaleType: ScaleTypes.LINEAR },
+              left: { mapsTo: 'value', scaleType: ScaleTypes.LINEAR, title: unit },
             },
-            legend: { enabled: false },
+            legend: { enabled: true },
             toolbar: { enabled: false },
           },
         });
@@ -127,7 +136,7 @@ function CarbonTrendChart({
       cancelled = true;
       chart?.destroy();
     };
-  }, [points, title, chartType]);
+  }, [points, title, chartType, unit]);
   return (
     <>
       <div ref={holder} className={styles.chart} aria-label={title} />

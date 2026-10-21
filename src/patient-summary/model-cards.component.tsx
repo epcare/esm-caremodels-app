@@ -6,7 +6,7 @@ import styles from './care-models-summary.scss';
 
 /**
  * Model cards row (designs 1–3): one card per ACTIVE enrollment — category icon, display label,
- * status tag and enrollment date — plus a Past Care Models card when history exists.
+ * status tag, enrollment date and current episode. No history is synthesized.
  */
 export interface ModelCardModel {
   modelUuid: string;
@@ -15,6 +15,7 @@ export interface ModelCardModel {
   status: 'Active' | 'Past';
   since?: string;
   episodeCount?: number;
+  episodeNumber?: number;
 }
 
 export function ModelCards({
@@ -52,10 +53,17 @@ export function ModelCards({
               </Tag>
             )}
             <span className={styles.cardMeta}>
-              {model.status === 'Active' && model.since
-                ? t('sinceDate', 'Since {{date}}', { date: model.since })
+              {model.status === 'Active'
+                ? model.since
+                  ? t('sinceDate', 'Since {{date}}', { date: model.since })
+                  : t('enrollmentDateUnavailable', 'Enrollment date unavailable')
                 : t('episodeCount', '{{count}} episodes', { count: model.episodeCount ?? 0 })}
             </span>
+            {model.status === 'Active' && model.episodeNumber !== undefined && (
+              <span className={styles.cardMeta}>
+                {t('enrollmentEpisode', 'Episode {{number}}', { number: model.episodeNumber })}
+              </span>
+            )}
           </span>
         </button>
       ))}

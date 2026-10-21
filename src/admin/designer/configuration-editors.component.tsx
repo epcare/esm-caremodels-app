@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import type { ActionDefinition, ModelDefinition, RuleNode } from '../../types/caremodels';
 import type { OpenmrsForm } from '../../api/caremodels.resource';
 import { FormMultiSelector, ResourceSelector } from '../resource-selector.component';
+import { DataSourceBuilder, SourceSettings } from './data-source-builder.component';
 import { RuleBuilder, emptyGroup } from './rule-builder.component';
 import styles from './designer.scss';
 
@@ -23,7 +24,6 @@ const validAlias = (value: string) => /^[a-z][a-zA-Z0-9._-]{0,99}$/.test(value);
 export function DataSourcesEditor({ definition, onChange }: EditorProps) {
   const { t } = useTranslation();
   const [alias, setAlias] = useState('');
-  const [sourceKey, setSourceKey] = useState('');
   const [bindingType, setBindingType] = useState<'concepts' | 'programs' | 'encounterTypes' | 'codedAnswers'>(
     'concepts',
   );
@@ -76,118 +76,18 @@ export function DataSourcesEditor({ definition, onChange }: EditorProps) {
         </Tile>
       ))}
       <h3>{t('dataSources', 'Clinical data sources')}</h3>
-      <InlineNotification
-        kind="info"
-        title={t(
-          'resolverLimit',
-          'This backend currently implements latest-observation only. Other resolver types require backend support.',
-        )}
-        hideCloseButton
-      />
-      <div className={styles.tabToolbar}>
-        <TextInput
-          id="new-source-key"
-          labelText={t('dataSourceKey', 'Data source key')}
-          value={sourceKey}
-          onChange={(e) => setSourceKey(e.target.value)}
-        />
-        <Button
-          kind="tertiary"
-          disabled={
-            !validAlias(sourceKey) ||
-            sourceKey in definition.dataSources ||
-            sources.length >= 200 ||
-            !Object.keys(definition.terminology.concepts ?? {}).length
-          }
-          onClick={() => {
-            onChange({
-              ...definition,
-              dataSources: {
-                ...definition.dataSources,
-                [sourceKey]: {
-                  type: 'latest-observation',
-                  conceptAlias: Object.keys(definition.terminology.concepts!)[0],
-                  resultType: 'NUMBER',
-                  maxResults: 1,
-                  includeVoided: false,
-                },
-              },
-            });
-            setSourceKey('');
-          }}>
-          {t('addDataSource', 'Add data source')}
-        </Button>
-      </div>
-      {sources.map(([key, source]) => {
-        const update = (next: typeof source) =>
-          onChange({ ...definition, dataSources: { ...definition.dataSources, [key]: next } });
+      <DataSourceBuilder definition={definition} onSave={(next) => onChange(next)} />
+      {sources.map(([key]) => {
         const used = definition.workspace.tabs.some((tab) => tab.widgets.some((widget) => widget.dataSource === key));
         return (
           <Tile key={key}>
             <Stack gap={4}>
               <h4>{key}</h4>
-              <p>{source.type}</p>
-              {source.type === 'latest-observation' ? (
-                <>
-                  <Select
-                    id={`source-concept-${key}`}
-                    labelText={t('conceptAlias', 'Concept alias')}
-                    value={source.conceptAlias ?? ''}
-                    onChange={(e) => update({ ...source, conceptAlias: e.target.value })}>
-                    {Object.keys(definition.terminology.concepts ?? {}).map((alias) => (
-                      <SelectItem key={alias} value={alias} text={alias} />
-                    ))}
-                  </Select>
-                  <Select
-                    id={`source-result-${key}`}
-                    labelText={t('resultType', 'Result type')}
-                    value={source.resultType}
-                    onChange={(e) => update({ ...source, resultType: e.target.value as typeof source.resultType })}>
-                    {['NUMBER', 'CODED', 'DATE', 'STRING', 'TIMESERIES', 'TABLE'].map((type) => (
-                      <SelectItem key={type} value={type} text={type} />
-                    ))}
-                  </Select>
-                  <TextInput
-                    id={`source-units-${key}`}
-                    labelText={t('units', 'Units')}
-                    maxLength={20}
-                    value={source.units ?? ''}
-                    onChange={(e) => update({ ...source, units: e.target.value })}
-                  />
-                  <NumberInput
-                    id={`source-limit-${key}`}
-                    label={t('maxResults', 'Maximum results')}
-                    min={1}
-                    max={1000}
-                    value={source.maxResults ?? 1}
-                    onChange={(_, { value }) => {
-                      const n = Number(value);
-                      if (Number.isInteger(n) && n >= 1 && n <= 1000) update({ ...source, maxResults: n });
-                    }}
-                  />
-                  <NumberInput
-                    id={`source-window-${key}`}
-                    label={t('windowDays', 'Window (days)')}
-                    min={1}
-                    max={3650}
-                    value={source.windowDays ?? 365}
-                    onChange={(_, { value }) => {
-                      const n = Number(value);
-                      if (Number.isInteger(n) && n >= 1 && n <= 3650) update({ ...source, windowDays: n });
-                    }}
-                  />
-                </>
-              ) : (
-                <p>
-                  {t(
-                    'unavailableResolverEditor',
-                    'Existing configuration is preserved. Editing this resolver requires its registered backend implementation.',
-                  )}
-                </p>
-              )}
+              <SourceSettings sourceKey={key} definition={definition} onChange={onChange} />
               <Button
                 kind="danger--ghost"
                 disabled={used}
+                title={used ? t('sourceInUse', 'Remove widget bindings before deleting this source.') : undefined}
                 onClick={() => {
                   const next = { ...definition.dataSources };
                   delete next[key];
@@ -195,7 +95,6 @@ export function DataSourcesEditor({ definition, onChange }: EditorProps) {
                 }}>
                 {t('removeDataSource', 'Remove data source')}
               </Button>
-              {used && <p>{t('sourceInUse', 'Unbind this source from widgets before removing it.')}</p>}
             </Stack>
           </Tile>
         );

@@ -16,7 +16,11 @@ export function ModelWorkspace({ patientUuid, model }: { patientUuid: string; mo
   const { t } = useTranslation();
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  const { data: workspace, error, isLoading } = useWorkspaceTab(patientUuid, model.modelCode, activeTabId);
+  const {
+    data: workspace,
+    error,
+    isLoading,
+  } = useWorkspaceTab(patientUuid, model.modelCode, activeTabId, model.memberUuid);
 
   if (error) {
     return (

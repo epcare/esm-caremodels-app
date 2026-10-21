@@ -28,9 +28,7 @@ const workspace = {
 it('requests membership default representation without registry or data calls', async () => {
   respond({ results: [{ modelCode: 'test' }] });
   expect(await fetchMemberships('patient/a')).toEqual([{ modelCode: 'test' }]);
-  expect(fetch).toHaveBeenCalledExactlyOnceWith(
-    '/openmrs/ws/rest/v1/caremodels/membership?patient=patient%2Fa&v=default',
-  );
+  expect(fetch).toHaveBeenCalledExactlyOnceWith('/ws/rest/v1/caremodels/membership?patient=patient%2Fa&v=default');
 });
 
 it('omits the initial tab, requests default representation, and handles REST collections', async () => {
@@ -136,4 +134,62 @@ it('preserves server validation paths and messages', async () => {
     operation: 'validate',
     definition: '{"schemaVersion":"1.0.0"}',
   });
+});
+
+it('follows membership REST paging without dropping active models or changing the patient', async () => {
+  respond({
+    results: [{ memberUuid: 'first', modelCode: 'one' }],
+    links: [
+      { rel: 'next', uri: 'http://server/openmrs/ws/rest/v1/caremodels/membership?patient=patient&startIndex=50' },
+    ],
+  });
+  respond({ results: [{ memberUuid: 'second', modelCode: 'two' }] });
+  expect(await fetchMemberships('patient/a')).toEqual([
+    { memberUuid: 'first', modelCode: 'one' },
+    { memberUuid: 'second', modelCode: 'two' },
+  ]);
+  expect(fetch.mock.calls.at(-1)![0]).toBe(
+    '/ws/rest/v1/caremodels/membership?patient=patient%2Fa&v=default&startIndex=50',
+  );
+});
+
+it('rejects invalid REST paging links rather than repeating requests', async () => {
+  respond({ results: [], links: [{ rel: 'next', uri: '/membership?startIndex=0' }] });
+  await expect(fetchMemberships('patient')).rejects.toThrow('invalid next page');
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it('keeps metadata updates outside the definition and requests the existing model resource', async () => {
+  const { fetchModel, updateModelMetadata } = await import('./caremodels.resource');
+  respond({ code: 'model/a' });
+  await fetchModel('model/a');
+  expect(fetch).toHaveBeenLastCalledWith('/ws/rest/v1/caremodels/model/model%2Fa?v=default');
+  respond({ code: 'model/a' });
+  await updateModelMetadata('model/a', { name: 'Model', description: 'Description', privilege: 'View Model' });
+  expect(fetch).toHaveBeenLastCalledWith(
+    '/ws/rest/v1/caremodels/model/model%2Fa',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ name: 'Model', description: 'Description', privilege: 'View Model' }),
+    }),
+  );
+});
+
+it('passes supported status filters on the registry request', async () => {
+  const { fetchRegistryModels } = await import('./caremodels.resource');
+  respond({ results: [] });
+  await fetchRegistryModels('test', 'INACTIVE');
+  expect(fetch).toHaveBeenLastCalledWith(expect.stringContaining('q=test&status=INACTIVE'));
+});
+
+it('searches real concept metadata using the existing OpenMRS concept resource', async () => {
+  const { searchConcepts } = await import('./caremodels.resource');
+  respond({ results: [{ uuid: 'exact-uuid', display: 'BP', datatype: { display: 'Numeric' }, units: 'mmHg' }] });
+  const concepts = await searchConcepts('blood pressure');
+  expect(concepts[0].uuid).toBe('exact-uuid');
+  expect(fetch).toHaveBeenLastCalledWith(
+    expect.stringContaining('/concept?q=blood%20pressure&v=custom:(uuid,display,datatype:'),
+  );
+  expect(fetch.mock.calls.at(-1)![0]).toContain('answers:(uuid,display)');
+  expect(fetch.mock.calls.at(-1)![0]).toContain('units');
 });

@@ -3,7 +3,6 @@ import {
   Button,
   Checkbox,
   InlineNotification,
-  NumberInput,
   Search,
   Select,
   SelectItem,
@@ -11,6 +10,11 @@ import {
   TextInput,
   Tile,
 } from '@carbon/react';
+import { Draggable, Edit } from '@carbon/react/icons';
+import { WidgetPreview } from './widget-preview.component';
+import { WidgetInspector } from './widget-inspector.component';
+import { ModelPreview } from './model-preview.component';
+import { bindWidgetSource, unavailableWidgets } from '../../widgets/widget-registry';
 import { useTranslation } from 'react-i18next';
 import type { DefinitionTab, GridPosition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
 import { moveItem, reorderWidgets, updateDefinitionTab, widgetManifest } from './definition';
@@ -83,6 +87,7 @@ export function WorkspaceEditor({
     setTabId(id);
     setSelectedId(null);
   };
+  if (preview) return <ModelPreview definition={definition} />;
   return (
     <Stack gap={5}>
       <div className={styles.tabToolbar}>
@@ -185,40 +190,68 @@ export function WorkspaceEditor({
         {!preview && (
           <div className={styles.palette}>
             <h4>{t('components', 'Components')}</h4>
+            <p className={styles.sectionHint}>
+              {t('disabledCatalogHint', 'Dimmed components require backend schema or resolver support.')}
+            </p>
             <Search
               labelText={t('searchComponents', 'Search components')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               size="sm"
             />
-            {widgetManifest
-              .filter((item) => item.label.toLowerCase().includes(query.toLowerCase()))
-              .map((item) => (
-                <Button
-                  key={item.type}
-                  kind="ghost"
-                  className={styles.paletteItem}
-                  disabled={tab.widgets.length >= 50 || nextRow > 100}
-                  onClick={() => {
-                    const id = `${item.type}-${crypto.randomUUID()}`;
-                    updateTab({
-                      ...tab,
-                      widgets: [
-                        ...tab.widgets,
-                        {
-                          id,
-                          type: item.type,
-                          loadingPolicy: 'ON_VISIBLE',
-                          position: { row: nextRow, col: 1, w: 6, h: 2 },
-                          properties: { title: item.label },
-                        },
-                      ],
-                    });
-                    setSelectedId(id);
-                  }}>
-                  {t(`widget.${item.type}`, item.label)}
-                </Button>
-              ))}
+            {(['clinical', 'actions', 'layout'] as const).map((group) => (
+              <section key={group}>
+                <h5>
+                  {t(
+                    `paletteGroup.${group}`,
+                    { clinical: 'Clinical Data', actions: 'Forms & Actions', layout: 'Layout & Content' }[group],
+                  )}
+                </h5>
+                {widgetManifest
+                  .filter((item) => item.group === group && item.label.toLowerCase().includes(query.toLowerCase()))
+                  .map((item) => (
+                    <Button
+                      key={item.id}
+                      kind="ghost"
+                      className={styles.paletteItem}
+                      disabled={tab.widgets.length >= 50 || nextRow > 100}
+                      onClick={() => {
+                        const id = `${item.id}-${crypto.randomUUID()}`;
+                        updateTab({
+                          ...tab,
+                          widgets: [
+                            ...tab.widgets,
+                            {
+                              id,
+                              type: item.type,
+                              loadingPolicy: 'ON_VISIBLE',
+                              position: { row: nextRow, col: 1, ...item.dimensions },
+                              properties: { ...item.properties, title: item.label },
+                            },
+                          ],
+                        });
+                        setSelectedId(id);
+                      }}>
+                      {t(`widget.${item.id}`, item.label)}
+                    </Button>
+                  ))}
+                {unavailableWidgets
+                  .filter((item) => item.group === group && item.label.toLowerCase().includes(query.toLowerCase()))
+                  .map((item) => (
+                    <Button
+                      key={item.label}
+                      kind="ghost"
+                      className={styles.paletteItem}
+                      disabled
+                      title={t(
+                        'widgetBackendUnavailable',
+                        'This widget requires backend schema and resolver support.',
+                      )}>
+                      {t(`widgetCatalog.${item.label}`, item.label)}
+                    </Button>
+                  ))}
+              </section>
+            ))}
           </div>
         )}
         <div className={styles.canvas} style={{ maxWidth: size === 'narrow' ? '42rem' : undefined }}>
@@ -239,20 +272,23 @@ export function WorkspaceEditor({
                   const from = tab.widgets.findIndex((item) => item.id === e.dataTransfer.getData('text/plain'));
                   if (from >= 0) updateTab(reorderWidgets(tab, from, index));
                 }}>
-                {preview ? (
-                  <strong>{String(widget.properties?.title ?? widget.id)}</strong>
-                ) : (
-                  <Button kind="ghost" onClick={() => setSelectedId(widget.id)} aria-pressed={selectedId === widget.id}>
-                    {String(widget.properties?.title ?? widget.id)}
-                  </Button>
-                )}
-                <p>{widgetManifest.find((item) => item.type === widget.type)?.label ?? widget.type}</p>
-                <p>{widget.dataSource ?? widget.formAlias ?? ''}</p>
-                {preview && (
-                  <p>
-                    {t('previewPlaceholder', 'Configured content appears here for an authorized enrolled patient.')}
-                  </p>
-                )}
+                <div className={styles.canvasControls}>
+                  <span title={t('dragWidget', 'Drag to reorder widget')}>
+                    <Draggable size={16} aria-hidden />
+                  </span>
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    hasIconOnly
+                    renderIcon={Edit}
+                    iconDescription={t('selectWidgetName', 'Select {{name}}', {
+                      name: String(widget.properties?.title ?? widget.id),
+                    })}
+                    onClick={() => setSelectedId(widget.id)}
+                    aria-pressed={selectedId === widget.id}
+                  />
+                </div>
+                <WidgetPreview widget={widget} tabId={tab.id} />
               </Tile>
             );
           })}
@@ -262,106 +298,26 @@ export function WorkspaceEditor({
             <h4>{t('widgetProperties', 'Widget properties')}</h4>
             {selected && position ? (
               <Stack gap={5}>
-                <TextInput
-                  id="inspector-title"
-                  labelText={t('title', 'Title')}
-                  value={String(selected.properties?.title ?? '')}
-                  onChange={(e) =>
-                    updateWidget({ ...selected, properties: { ...selected.properties, title: e.target.value } })
+                <WidgetInspector
+                  key={selected.id}
+                  widget={selected}
+                  definition={definition}
+                  position={position}
+                  size={size}
+                  onWidgetChange={updateWidget}
+                  onDefinitionChange={onChange}
+                  onPositionChange={updatePosition}
+                  onCreateSource={(next, key) =>
+                    onChange(
+                      updateDefinitionTab(next, {
+                        ...tab,
+                        widgets: tab.widgets.map((widget) =>
+                          widget.id === selected.id ? bindWidgetSource(widget, key, next.dataSources[key]) : widget,
+                        ),
+                      }),
+                    )
                   }
                 />
-                {widgetManifest.find((item) => item.type === selected.type)?.data && (
-                  <Select
-                    id="inspector-source"
-                    labelText={t('dataSource', 'Data source')}
-                    value={selected.dataSource ?? ''}
-                    onChange={(e) => updateWidget({ ...selected, dataSource: e.target.value || undefined })}>
-                    <SelectItem value="" text={t('selectDataSource', 'Select a data source')} />
-                    {Object.keys(definition.dataSources).map((key) => (
-                      <SelectItem key={key} value={key} text={key} />
-                    ))}
-                  </Select>
-                )}
-                {selected.type === 'form-launcher' && (
-                  <Select
-                    id="inspector-form"
-                    labelText={t('form', 'Form')}
-                    value={selected.formAlias ?? ''}
-                    onChange={(e) => updateWidget({ ...selected, formAlias: e.target.value || undefined })}>
-                    <SelectItem value="" text={t('selectForm', 'Select a form')} />
-                    {definition.forms.map((form) => (
-                      <SelectItem key={form.alias} value={form.alias} text={form.alias} />
-                    ))}
-                  </Select>
-                )}
-                {selected.type === 'action-panel' &&
-                  definition.actions.map((action) => (
-                    <Checkbox
-                      key={action.id}
-                      id={`action-${action.id}`}
-                      labelText={action.label}
-                      checked={selected.actionIds?.includes(action.id) ?? false}
-                      onChange={(_, { checked }) =>
-                        updateWidget({
-                          ...selected,
-                          actionIds: checked
-                            ? [...(selected.actionIds ?? []), action.id]
-                            : selected.actionIds?.filter((id) => id !== action.id),
-                        })
-                      }
-                    />
-                  ))}
-                {selected.type === 'trend-chart' && (
-                  <>
-                    <Select
-                      id="chart-type"
-                      labelText={t('chartType', 'Chart type')}
-                      value={String(selected.properties?.chartType ?? 'line')}
-                      onChange={(e) =>
-                        updateWidget({ ...selected, properties: { ...selected.properties, chartType: e.target.value } })
-                      }>
-                      <SelectItem value="line" text={t('lineChart', 'Line chart')} />
-                      <SelectItem value="bar" text={t('barChart', 'Bar chart')} />
-                    </Select>
-                    <Checkbox
-                      id="show-data-table"
-                      labelText={t('showDataTable', 'Show data table')}
-                      checked={selected.properties?.showDataTable === true}
-                      onChange={(_, { checked }) =>
-                        updateWidget({ ...selected, properties: { ...selected.properties, showDataTable: checked } })
-                      }
-                    />
-                  </>
-                )}
-                <Select
-                  id="loading-policy"
-                  labelText={t('loadingPolicy', 'Loading policy')}
-                  value={selected.loadingPolicy ?? 'ON_VISIBLE'}
-                  onChange={(e) =>
-                    updateWidget({ ...selected, loadingPolicy: e.target.value as WidgetInstance['loadingPolicy'] })
-                  }>
-                  <SelectItem value="ON_VISIBLE" text={t('onVisible', 'When visible')} />
-                  <SelectItem value="EAGER" text={t('eager', 'When section opens')} />
-                </Select>
-                {(['row', 'col', 'w', 'h'] as const).map((key) => (
-                  <NumberInput
-                    key={`${selected.id}-${size}-${key}`}
-                    id={`position-${key}`}
-                    label={t(`grid.${key}`, { row: 'Row', col: 'Column', w: 'Width', h: 'Height' }[key])}
-                    min={key === 'row' ? 0 : 1}
-                    max={key === 'row' ? 100 : key === 'h' ? 20 : 12}
-                    value={position[key]}
-                    onChange={(_, { value }) => {
-                      const n = Number(value);
-                      if (
-                        Number.isInteger(n) &&
-                        n >= (key === 'row' ? 0 : 1) &&
-                        n <= (key === 'row' ? 100 : key === 'h' ? 20 : 12)
-                      )
-                        updatePosition(key, n);
-                    }}
-                  />
-                ))}
                 <Button
                   kind="ghost"
                   disabled={index === 0}

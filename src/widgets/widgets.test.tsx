@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { WidgetRenderer } from './widget-renderer.component';
 import { chartPoints } from './trend-chart.component';
 import { useWidgetData } from '../api/caremodels.resource';
@@ -96,4 +96,65 @@ it('plots only dated numeric observations and destroys charts when a widget unmo
   expect(screen.getByText('12')).toBeInTheDocument();
   unmount();
   expect(charts.destroy).toHaveBeenCalledTimes(1);
+});
+
+it('renders shared metric units, precision, target status and observation date from real result fields', () => {
+  vi.mocked(useWidgetData).mockReturnValue({
+    data: {
+      type: 'latest-observation',
+      values: [{ obsUuid: 'obs', valueType: 'NUMBER', value: 7.24, effectiveTime: '2026-02-01' }],
+    },
+    isLoading: false,
+  } as never);
+  render(
+    <WidgetRenderer
+      {...props}
+      widget={{
+        id: 'metric',
+        type: 'metric',
+        dataSource: 'source',
+        properties: { title: 'Result', unit: '%', decimals: 1, showStatus: true, targetMax: 6 },
+      }}
+    />,
+  );
+  expect(screen.getByText('7.2')).toBeInTheDocument();
+  expect(screen.getByText('%')).toBeInTheDocument();
+  expect(screen.getByText('Outside target')).toBeInTheDocument();
+  expect(screen.getByText('Recorded 2026-02-01')).toBeInTheDocument();
+});
+it('renders clinical status using the metric contract and actual coded label', () => {
+  vi.mocked(useWidgetData).mockReturnValue({
+    data: {
+      type: 'latest-observation',
+      values: [{ obsUuid: 'obs', valueType: 'CODED', value: 'real-answer-uuid', valueName: 'Enrolled' }],
+    },
+    isLoading: false,
+  } as never);
+  render(
+    <WidgetRenderer
+      {...props}
+      widget={{ id: 'status', type: 'metric', dataSource: 'source', properties: { presentation: 'status' } }}
+    />,
+  );
+  expect(screen.getByText('Enrolled')).toBeInTheDocument();
+  expect(screen.queryByText('real-answer-uuid')).not.toBeInTheDocument();
+});
+it('paginates clinical observation collections with correct boundaries', () => {
+  vi.mocked(useWidgetData).mockReturnValue({
+    data: {
+      type: 'latest-observation',
+      values: Array.from({ length: 7 }, (_, i) => ({
+        obsUuid: `obs${i}`,
+        valueType: 'STRING',
+        value: `Observation ${i}`,
+      })),
+    },
+    isLoading: false,
+  } as never);
+  render(<WidgetRenderer {...props} widget={{ id: 'table', type: 'clinical-table', dataSource: 'source' }} />);
+  expect(screen.queryByText('Observation 6')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  expect(screen.getByText('Observation 6')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
 });

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { openmrsFetch } from '@openmrs/esm-framework';
 import { WorkspaceEditor } from './workspace-editor.component';
+import { parseDefinitionJson } from './definition-validation';
 import { blankDefinition } from './definition';
 
 function Editor() {
   const initial = blankDefinition();
+  initial.metadata.display.label = 'Test';
   initial.workspace.tabs.push({ id: 'history', label: 'History', widgets: [{ id: 'history-metric', type: 'metric' }] });
   const [definition, setDefinition] = useState(initial);
   return (
@@ -39,6 +42,58 @@ it('preview cannot add widgets or execute patient APIs', () => {
   const onChange = vi.fn();
   render(<WorkspaceEditor definition={blankDefinition()} onChange={onChange} preview />);
   expect(screen.queryByRole('button', { name: 'Clinical Metric' })).not.toBeInTheDocument();
-  expect(screen.getByText(/clinical data and actions are disabled/)).toBeInTheDocument();
+  expect(screen.getByText('Demonstration data — not a patient record')).toBeInTheDocument();
   expect(onChange).not.toHaveBeenCalled();
+});
+it('uses shared realistic previews with no clinical API calls and exposes inspector tabs', () => {
+  render(<Editor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Clinical Status', exact: true }));
+  expect(screen.getByText('Preview data')).toBeInTheDocument();
+  expect(screen.getByText('Active')).toBeInTheDocument();
+  expect(openmrsFetch).not.toHaveBeenCalled();
+  expect(screen.getByRole('tab', { name: 'Content' })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'Data source' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('tab', { name: 'Display' }));
+  expect(screen.getByLabelText('Empty-state text')).toBeInTheDocument();
+  const definition = JSON.parse(screen.getByTestId('definition').textContent!);
+  expect(definition.workspace.tabs[0].widgets[0]).toMatchObject({
+    type: 'metric',
+    properties: { presentation: 'status' },
+  });
+  expect(definition.workspace.tabs[0].widgets[0]).not.toHaveProperty('dataSource');
+});
+
+vi.mock('../concept-selector.component', () => ({
+  ConceptSelector: ({ onSelect }) => (
+    <button
+      onClick={() =>
+        onSelect({
+          uuid: '11111111-1111-4111-8111-111111111111',
+          display: 'Height',
+          datatype: { display: 'Numeric' },
+          units: 'cm',
+        })
+      }>
+      Select real height concept
+    </button>
+  ),
+}));
+it('creates and binds a source atomically from the inspector and preserves a compatible JSON document', () => {
+  render(<Editor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Clinical Metric', exact: true }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Data source' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create data source', exact: true }));
+  fireEvent.change(screen.getByLabelText('Data source key'), { target: { value: 'height' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Select real height concept' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create data source', exact: true }));
+  const definition = JSON.parse(screen.getByTestId('definition').textContent!);
+  expect(definition.dataSources.height).toMatchObject({
+    type: 'latest-observation',
+    resultType: 'NUMBER',
+    conceptAlias: 'height.concept',
+  });
+  expect(definition.terminology.concepts['height.concept']).toBe('11111111-1111-4111-8111-111111111111');
+  expect(definition.workspace.tabs[0].widgets[0]).toMatchObject({ dataSource: 'height', properties: { unit: 'cm' } });
+  expect(parseDefinitionJson(JSON.stringify(definition)).errors).toEqual([]);
+  expect(definition.workspace.tabs[1].widgets[0].id).toBe('history-metric');
 });

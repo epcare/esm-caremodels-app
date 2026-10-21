@@ -11,6 +11,13 @@ export function FormLauncherWidget({ widget }: { widget: WidgetInstance; patient
   const reason = t('formMetadataUnavailable', 'The workspace API has not supplied a resolved form reference.');
   return (
     <div className={styles.formLauncher}>
+      <p className={styles.widgetTitle}>{label}</p>
+      {Boolean(widget.properties?.subtitle) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
+      )}
+      {Boolean(widget.properties?.description) && (
+        <p className={styles.widgetSubtitle}>{String(widget.properties?.description)}</p>
+      )}
       <Button kind="primary" disabled title={reason}>
         {label}
       </Button>

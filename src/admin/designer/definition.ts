@@ -1,13 +1,6 @@
 import type { DefinitionTab, ModelDefinition, WidgetInstance } from '../../types/caremodels';
 
-export const widgetManifest: Array<{ type: WidgetInstance['type']; label: string; data: boolean }> = [
-  { type: 'metric', label: 'Clinical Metric', data: true },
-  { type: 'trend-chart', label: 'Trend Chart', data: true },
-  { type: 'clinical-table', label: 'Clinical Table', data: true },
-  { type: 'timeline', label: 'Timeline', data: true },
-  { type: 'form-launcher', label: 'Form Launcher', data: false },
-  { type: 'action-panel', label: 'Quick Actions', data: false },
-];
+export { widgetManifest } from '../../widgets/widget-registry';
 export function blankDefinition(): ModelDefinition {
   return {
     schemaVersion: '1.0.0',

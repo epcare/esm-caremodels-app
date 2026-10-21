@@ -127,3 +127,19 @@ export const patientRequestOptions = {
   shouldRetryOnError: false,
   revalidateOnFocus: true,
 };
+
+export interface RestCollection<T> {
+  results: Array<T>;
+  links?: Array<{ rel: string; uri: string }>;
+}
+
+/** RESTWS uses uri, not href, in next links. Only carry its cursor onto our own endpoint. */
+export function nextRestPage<T>(collection: RestCollection<T>, currentIndex: number): number | null {
+  const next = collection.links?.find((link) => link.rel === 'next');
+  if (!next) return null;
+  const cursor = new URL(next.uri, window.location.origin).searchParams.get('startIndex');
+  const index = cursor === null ? NaN : Number(cursor);
+  if (!Number.isSafeInteger(index) || index <= currentIndex)
+    throw new Error('The REST endpoint returned an invalid next page.');
+  return index;
+}
