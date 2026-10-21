@@ -1,0 +1,79 @@
+{
+  "name": "@epcare/esm-caremodels-app",
+  "version": "1.0.0",
+  "description": "Care Models microfrontend for the ePCare frontend: enrolled-only patient care model tabs and workspace, backed by openmrs-module-caremodels",
+  "browser": "dist/esm-caremodels-app.js",
+  "main": "src/index.ts",
+  "source": true,
+  "files": [
+    "*"
+  ],
+  "license": "MPL-2.0",
+  "keywords": [
+    "openmrs",
+    "ugandaemr",
+    "caremodels"
+  ],
+  "scripts": {
+    "start": "openmrs develop",
+    "serve": "rspack serve --mode=development",
+    "debug": "npm run serve",
+    "build": "rspack --mode production",
+    "analyze": "rspack --mode=production --env.analyze=true",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest watch",
+    "coverage": "vitest run --coverage --passWithNoTests",
+    "typescript": "tsc",
+    "verify": "yarn lint && yarn typescript && yarn test",
+    "extract-translations": "i18next 'src/**/*.component.tsx' 'src/index.ts' --config tools/i18next-parser.config.js"
+  },
+  "browserslist": [
+    "extends browserslist-config-openmrs"
+  ],
+  "dependencies": {
+    "@carbon/charts": "1.27.21",
+    "lodash-es": "^4.17.15"
+  },
+  "peerDependencies": {
+    "@carbon/react": "1.x",
+    "@openmrs/esm-framework": "11.x",
+    "dayjs": "1.x",
+    "react": "18.x",
+    "react-dom": "18.x",
+    "react-i18next": "16.x",
+    "swr": "2.x"
+  },
+  "devDependencies": {
+    "@carbon/react": "~1.92.1",
+    "@openmrs/eslint-config": "^2.0.0",
+    "@openmrs/esm-framework": "11.0.1-pre.5776",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/lodash-es": "^4.17.3",
+    "@types/react": "^18.3.21",
+    "@types/react-dom": "^18.3.0",
+    "@types/webpack-env": "^1.16.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "browserslist-config-openmrs": "^1.0.1",
+    "dayjs": "^1.11.6",
+    "eslint": "^9.39.0",
+    "happy-dom": "^20.0.0",
+    "i18next": "^25.0.0",
+    "i18next-parser": "^9.3.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jsdom": "^28",
+    "openmrs": "next",
+    "prettier": "3.9.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^16.0.0",
+    "react-router-dom": "6",
+    "swr": "2.5.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.2"
+  },
+  "packageManager": "yarn@4.9.2"
+}

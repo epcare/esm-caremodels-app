@@ -1,0 +1,274 @@
+import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
+import useSWR, { useSWRConfig } from 'swr';
+import { isAuthorizationError, parseDataResult, parseWorkspace, patientRequestOptions } from './contract';
+import { careModelsBaseUrl, masterPrivilege } from '../constants';
+import type {
+  CareModelMembership,
+  CareModelsSession,
+  DataResult,
+  RegistryModel,
+  WorkspaceTab,
+} from '../types/caremodels';
+
+/**
+ * Care Models REST client. Every endpoint here is independently authorized server-side; the
+ * client-side checks exist only to decide what NOT to request.
+ */
+
+export async function fetchSession(): Promise<CareModelsSession> {
+  const { data } = await openmrsFetch<CareModelsSession>(`${restBaseUrl}/session`);
+  return data;
+}
+
+/** Master-privilege gate: no Care Models requests are made when this returns false. */
+export function hasMasterPrivilege(session: CareModelsSession | undefined): boolean {
+  return Boolean(
+    session?.authenticated && session?.user?.privileges?.some((privilege) => privilege.name === masterPrivilege),
+  );
+}
+
+export async function fetchMemberships(patientUuid: string): Promise<Array<CareModelMembership>> {
+  const { data } = await openmrsFetch<{ results: Array<CareModelMembership> }>(
+    `${careModelsBaseUrl}/membership?patient=${encodeURIComponent(patientUuid)}&v=default`,
+  );
+  return data.results ?? [];
+}
+
+export async function fetchWorkspaceTab(
+  patientUuid: string,
+  modelCode: string,
+  tabId: string | null,
+): Promise<WorkspaceTab> {
+  const tabQuery = tabId ? `&tab=${encodeURIComponent(tabId)}` : '';
+  const { data } = await openmrsFetch<{ results?: Array<WorkspaceTab> } | Array<WorkspaceTab>>(
+    `${careModelsBaseUrl}/workspace?patient=${encodeURIComponent(patientUuid)}&model=${encodeURIComponent(modelCode)}${tabQuery}&v=default`,
+  );
+  // the endpoint returns a single-element result set
+  const tab = Array.isArray(data) ? data[0] : data.results?.[0];
+  if (!tab) {
+    throw new Error('Workspace tab not found');
+  }
+  return parseWorkspace(tab);
+}
+
+export async function fetchWidgetData(
+  patientUuid: string,
+  modelCode: string,
+  tabId: string,
+  dataSource: string,
+): Promise<DataResult> {
+  const { data } = await openmrsFetch<{ resultJson: string }>(`${careModelsBaseUrl}/data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient: patientUuid, model: modelCode, tab: tabId, dataSource }),
+  });
+  return parseDataResult(data.resultJson);
+}
+
+export function useSession() {
+  return useSWR<CareModelsSession>('caremodels-session', fetchSession, {
+    refreshInterval: 60000,
+    shouldRetryOnError: false,
+  });
+}
+
+export function useMemberships(patientUuid: string | null, enabled: boolean) {
+  return useSWR<Array<CareModelMembership>>(
+    enabled && patientUuid ? ['caremodels-memberships', patientUuid] : null,
+    ([, uuid]) => fetchMemberships(uuid as string),
+    patientRequestOptions,
+  );
+}
+
+/** Admin registry listing; requires the manage privilege server-side. */
+export async function fetchRegistryModels(q: string): Promise<Array<RegistryModel>> {
+  // Request cumulative prefixes: the supplied Java resource paginates in both the DAO
+  // and NeedsPaging. Keeping startIndex=0 avoids applying the offset twice.
+  let limit = 100;
+  let previousLength = -1;
+  for (;;) {
+    const { data } = await openmrsFetch<{ results: Array<RegistryModel>; links?: Array<{ rel: string }> }>(
+      `${careModelsBaseUrl}/model?includeRetired=true&v=default&startIndex=0&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+    );
+    const results = data.results ?? [];
+    if (results.length < limit && !data.links?.some((link) => link.rel === 'next')) return results;
+    if (results.length <= previousLength || limit >= 10000)
+      throw new Error('The server registry page limit was reached. Narrow the registry search.');
+    previousLength = results.length;
+    limit *= 2;
+  }
+}
+
+export function useRegistry(q = '') {
+  return useSWR(['caremodels-registry', q], () => fetchRegistryModels(q), { shouldRetryOnError: false });
+}
+
+export function useWorkspaceTab(patientUuid: string, modelCode: string | null, tabId: string | null) {
+  return useSWR<WorkspaceTab>(
+    patientUuid && modelCode ? ['caremodels-workspace', patientUuid, modelCode, tabId ?? ''] : null,
+    ([, uuid, code, tab]) => fetchWorkspaceTab(uuid as string, code as string, (tab as string) || null),
+    patientRequestOptions,
+  );
+}
+
+export function useWidgetData(patientUuid: string, modelCode: string, tabId: string, dataSource: string | null) {
+  const { mutate } = useSWRConfig();
+  return useSWR<DataResult>(
+    patientUuid && modelCode && tabId && dataSource
+      ? ['caremodels-data', patientUuid, modelCode, tabId, dataSource]
+      : null,
+    ([, uuid, code, tab, source]) => fetchWidgetData(uuid as string, code as string, tab as string, source as string),
+    {
+      ...patientRequestOptions,
+      onError: (error) => {
+        if (isAuthorizationError(error))
+          void mutate(
+            (key) =>
+              Array.isArray(key) && ['caremodels-memberships', 'caremodels-workspace'].includes(key[0] as string),
+            undefined,
+            { revalidate: true },
+          );
+      },
+    },
+  );
+}
+
+// ========================
+// Admin designer operations (POST /ws/rest/v1/caremodels/modeloperation)
+// ========================
+
+export interface OperationResult {
+  expectedRevision?: number;
+  modelCode?: string;
+  modelUuid?: string;
+  status?: string;
+  revision?: number;
+  valid?: boolean;
+  validationErrors?: string;
+  conflict?: boolean;
+  currentRevision?: number;
+  envelope?: string;
+}
+
+export async function modelOperation(payload: Record<string, unknown>): Promise<OperationResult> {
+  const { data } = await openmrsFetch<OperationResult>(`${careModelsBaseUrl}/modeloperation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return data;
+}
+
+export function createModel(body: {
+  code: string;
+  name: string;
+  description?: string;
+  privilege: string;
+  definition: object;
+}) {
+  return modelOperation({ operation: 'create', ...body, definition: JSON.stringify(body.definition) });
+}
+
+export function saveDraft(code: string, definition: object, expectedRevision: number) {
+  return modelOperation({ operation: 'saveDraft', code, definition: JSON.stringify(definition), expectedRevision });
+}
+
+export function validateDefinition(definition: object) {
+  return modelOperation({ operation: 'validate', definition: JSON.stringify(definition) });
+}
+
+export function publishModel(code: string, version: string, expectedRevision: number) {
+  return modelOperation({ operation: 'publish', code, version, expectedRevision });
+}
+
+export function fetchEnvelope(code: string) {
+  return modelOperation({ operation: 'envelope', code });
+}
+
+export function duplicateModel(sourceCode: string, newCode: string, newName: string, privilege: string) {
+  return modelOperation({ operation: 'duplicate', sourceCode, newCode, newName, privilege });
+}
+export function importModel(code: string, name: string, privilege: string, envelope: object) {
+  return modelOperation({ operation: 'import', code, name, privilege, envelope: JSON.stringify(envelope) });
+}
+export function changeModelStatus(code: string, operation: 'deactivate' | 'reactivate') {
+  return modelOperation({ operation, code });
+}
+export async function fetchModel(code: string): Promise<RegistryModel> {
+  const { data } = await openmrsFetch<RegistryModel>(
+    `${careModelsBaseUrl}/model/${encodeURIComponent(code)}?v=default`,
+  );
+  return data;
+}
+export async function updateModelMetadata(
+  code: string,
+  metadata: { name: string; description: string; privilege: string },
+) {
+  const { data } = await openmrsFetch<RegistryModel>(`${careModelsBaseUrl}/model/${encodeURIComponent(code)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(metadata),
+  });
+  return data;
+}
+export interface OpenmrsChoice {
+  uuid: string;
+  display: string;
+  name?: string;
+}
+export async function fetchPrivileges(): Promise<Array<string>> {
+  const { data } = await openmrsFetch<{ results: Array<{ name: string }> }>(
+    `${restBaseUrl}/privilege?v=default&limit=1000`,
+  );
+  return data.results
+    .map(({ name }) => name)
+    .filter((name) => name !== masterPrivilege)
+    .sort();
+}
+export function usePrivileges() {
+  return useSWR('caremodels-privileges', fetchPrivileges);
+}
+export async function searchOpenmrsResources(
+  resource: 'concept' | 'program' | 'encountertype' | 'form',
+  q: string,
+): Promise<Array<OpenmrsChoice>> {
+  const { data } = await openmrsFetch<{ results: Array<OpenmrsChoice> }>(
+    `${restBaseUrl}/${resource}?q=${encodeURIComponent(q)}&v=default&limit=50`,
+  );
+  return data.results;
+}
+
+/** Custom core form representation supplied for Care Models form-alias configuration. */
+export interface OpenmrsForm {
+  uuid: string;
+  name: string;
+  encounterType?: { uuid: string; name: string } | null;
+  version: string;
+  published: boolean;
+  retired: boolean;
+  resources: Array<{ uuid: string; name: string; dataType: string; valueReference: string }>;
+}
+export const formRepresentation =
+  'custom:(uuid,name,encounterType:(uuid,name),version,published,retired,resources:(uuid,name,dataType,valueReference))';
+
+export async function fetchForms(): Promise<Array<OpenmrsForm>> {
+  const forms = new Map<string, OpenmrsForm>();
+  const visited = new Set<number>();
+  let startIndex = 0;
+  for (;;) {
+    if (visited.has(startIndex)) throw new Error('The forms endpoint returned a repeated page.');
+    visited.add(startIndex);
+    const { data } = await openmrsFetch<{ results: Array<OpenmrsForm>; links?: Array<{ rel: string; uri: string }> }>(
+      `${restBaseUrl}/form?v=${formRepresentation}&includeAll=true${startIndex ? `&startIndex=${startIndex}` : ''}`,
+    );
+    for (const form of data.results) forms.set(form.uuid, form);
+    const next = data.links?.find((link) => link.rel === 'next');
+    if (!next) return Array.from(forms.values());
+    // Keep the configured API host and representation; use only the REST paging cursor.
+    const cursor = new URL(next.uri, window.location.origin).searchParams.get('startIndex');
+    const nextIndex = cursor === null ? NaN : Number(cursor);
+    if (!Number.isInteger(nextIndex) || nextIndex <= startIndex)
+      throw new Error('The forms endpoint returned an invalid next page.');
+    startIndex = nextIndex;
+  }
+}

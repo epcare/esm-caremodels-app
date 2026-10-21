@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.openmrs.org/routes.schema.json",
+  "backendDependencies": {
+    "webservices.rest": "^2.24.0"
+  },
+  "pages": [
+    {
+      "component": "careModelsAdminHome",
+      "routeRegex": "^(?:home/)?care-models-admin/?$"
+    },
+    {
+      "component": "careModelsDesigner",
+      "routeRegex": "^(?:home/)?care-models-admin/[^/]+/?$"
+    }
+  ],
+  "extensions": [
+    {
+      "name": "care-models-summary-dashboard-link",
+      "component": "careModelsSummaryDashboardLink",
+      "slot": "patient-chart-dashboard-slot",
+      "order": 40,
+      "meta": {
+        "columns": 1,
+        "columnSpan": 1,
+        "slot": "patient-chart-caremodels-dashboard-slot",
+        "path": "care-models"
+      },
+      "privileges": ["View Care Models"]
+    },
+    {
+      "name": "care-models-patient-summary",
+      "component": "careModelsPatientSummary",
+      "slot": "patient-chart-caremodels-dashboard-slot",
+      "order": 10,
+      "meta": {
+        "columnSpan": 4
+      },
+      "privileges": ["View Care Models"]
+    },
+    {
+      "name": "care-models-admin-card-link",
+      "component": "careModelsAdminCardLink",
+      "slot": "system-admin-page-card-link-slot",
+      "order": 20,
+      "privileges": ["Task: caremodels.model.manage"]
+    }
+  ]
+}

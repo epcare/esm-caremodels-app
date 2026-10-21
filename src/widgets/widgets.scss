@@ -1,0 +1,52 @@
+.widgetTitle {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.metricTile {
+  min-height: 6rem;
+}
+
+.metricValue {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.missingData {
+  color: var(--cds-text-secondary);
+}
+
+.tableWrapper,
+.trendChart,
+.timeline,
+.formLauncher,
+.actionPanel {
+  margin-bottom: 1rem;
+}
+
+.trendList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trendPoint {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--cds-border-subtle);
+}
+
+.trendTime {
+  color: var(--cds-text-secondary);
+}
+
+.trendValue {
+  font-weight: 500;
+}
+.chart {
+  width: 100%;
+  min-height: 12rem;
+  color: var(--cds-text-secondary);
+}
