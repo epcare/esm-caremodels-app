@@ -3,6 +3,9 @@ import { Tile, Tag } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import { useWidgetData } from '../api/caremodels.resource';
 import type { DataResult, WidgetInstance } from '../types/caremodels';
+import { WidgetDataState } from './widget-data-state.component';
+import { formatClinicalValue, formatClinicalDate } from './clinical-format';
+import type { StatusMapping } from './widget-properties';
 import styles from './widgets.scss';
 
 /**
@@ -47,49 +50,63 @@ function MetricValue({
   isLoading: boolean;
 }) {
   const { t } = useTranslation();
-  if (error) {
-    return <p className={styles.missingData}>{t('dataUnavailable', 'Data unavailable')}</p>;
-  }
-  if (isLoading) {
-    return <p className={styles.missingData}>{t('loading', 'Loading…')}</p>;
-  }
-  const latest = data?.values?.[0];
-  if (!latest || latest.value === undefined || latest.value === null) {
+  if (error || isLoading || !data?.values?.length)
     return (
-      <p className={styles.missingData}>
-        {String(widget.properties?.emptyText || t('noMeasurement', 'No measurement recorded'))}
+      <WidgetDataState
+        error={error}
+        isLoading={isLoading}
+        data={data}
+        emptyMessage={String(
+          widget.properties?.emptyMessage ||
+            widget.properties?.emptyText ||
+            t('noMeasurement', 'No measurement recorded'),
+        )}
+      />
+    );
+  const latest = data.values[0];
+  if (latest.value == null)
+    return (
+      <p>
+        {String(
+          widget.properties?.emptyMessage ||
+            widget.properties?.emptyText ||
+            t('noMeasurement', 'No measurement recorded'),
+        )}
       </p>
     );
-  }
   const properties = widget.properties ?? {};
-  const numeric = typeof latest.value === 'number';
-  const decimals =
-    typeof properties.decimals === 'number' ? Math.min(4, Math.max(0, Math.round(properties.decimals))) : undefined;
-  const value =
-    latest.valueName ??
-    (numeric && decimals !== undefined ? (latest.value as number).toFixed(decimals) : String(latest.value));
-  const outside =
-    numeric &&
-    ((typeof properties.targetMin === 'number' && Number(latest.value) < properties.targetMin) ||
-      (typeof properties.targetMax === 'number' && Number(latest.value) > properties.targetMax));
-  const hasTarget = numeric && (typeof properties.targetMin === 'number' || typeof properties.targetMax === 'number');
+  const precision = (properties.precision ?? properties.decimals) as number | undefined;
+  const value = formatClinicalValue(latest, precision);
+  const mapping = (properties.statusMappings as Array<StatusMapping> | undefined)?.find(
+    (item) => item.value === String(latest.value),
+  );
   return (
     <>
       {properties.presentation === 'status' ? (
-        <Tag type="blue">{value}</Tag>
+        <Tag type={mapping?.tone ?? 'blue'}>{mapping?.label ?? value}</Tag>
       ) : (
         <p className={styles.metricValue}>
           {value}
           {Boolean(properties.unit) && <span className={styles.metricUnit}> {String(properties.unit)}</span>}
         </p>
       )}
-      {properties.showStatus === true && hasTarget && (
-        <Tag type={outside ? 'red' : 'green'}>
-          {outside ? t('outsideTarget', 'Outside target') : t('withinTarget', 'Within target')}
-        </Tag>
+      {properties.showStatus === true && mapping && properties.presentation !== 'status' && (
+        <Tag type={mapping.tone}>{mapping.label}</Tag>
       )}
-      {latest.effectiveTime && (
-        <p className={styles.measurementDate}>{t('recordedAt', 'Recorded {{date}}', { date: latest.effectiveTime })}</p>
+      {properties.showStatus === true &&
+        !mapping &&
+        (properties.targetMin !== undefined || properties.targetMax !== undefined) && (
+          <p className={styles.widgetSubtitle}>
+            {t('configuredReference', 'Configured reference: {{minimum}} – {{maximum}}', {
+              minimum: properties.targetMin ?? '—',
+              maximum: properties.targetMax ?? '—',
+            })}
+          </p>
+        )}
+      {properties.showDate !== false && latest.effectiveTime && (
+        <p className={styles.measurementDate}>
+          {t('recordedAt', 'Recorded {{date}}', { date: formatClinicalDate(latest.effectiveTime) })}
+        </p>
       )}
       {Boolean(properties.description) && <p className={styles.widgetSubtitle}>{String(properties.description)}</p>}
     </>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
+  FileUploaderButton,
   DataTable,
   DataTableSkeleton,
   Dropdown,
@@ -26,6 +27,7 @@ import {
 import { Add, Copy, Download, Edit, Group, Pause, Play, Upload } from '@carbon/react/icons';
 import { UserHasAccess } from '@openmrs/esm-framework';
 import { changeModelStatus, duplicateModel, fetchEnvelope, importModel, useRegistry } from '../api/caremodels.resource';
+import { importWorkspaceDraft } from './workspace-import';
 import { parseEnvelope } from '../api/contract';
 import { careModelAdminUrl, navigateToCareModelAdmin } from '../utils/care-model-navigation';
 import type { RegistryModel } from '../types/caremodels';
@@ -70,6 +72,14 @@ function Registry() {
   const [name, setName] = useState('');
   const [privilege, setPrivilege] = useState('');
   const [json, setJson] = useState('');
+  const workspaceImport = useMemo(() => {
+    try {
+      const value = JSON.parse(json);
+      return value?.schemaVersion !== undefined && value?.storageSchemaVersion === undefined;
+    } catch {
+      return false;
+    }
+  }, [json]);
   const filtered = useMemo(
     () =>
       (models ?? []).filter(
@@ -144,18 +154,26 @@ function Registry() {
       if ((dialog.action === 'duplicate' || dialog.action === 'import') && code.trim() === 'new')
         throw new Error(t('reservedCode', 'The code new is reserved for model creation. Choose another code.'));
       if (dialog.action === 'duplicate') await duplicateModel(dialog.model!.code, code.trim(), name.trim(), privilege);
-      else if (dialog.action === 'import') await importModel(code.trim(), name.trim(), privilege, parseEnvelope(json));
-      else await changeModelStatus(dialog.model!.code, dialog.action);
+      else if (dialog.action === 'import') {
+        if (workspaceImport) await importWorkspaceDraft(code.trim(), json);
+        else await importModel(code.trim(), name.trim(), privilege, parseEnvelope(json));
+      } else await changeModelStatus(dialog.model!.code, dialog.action);
       setDialog(null);
       await mutate();
-      setMessage({ kind: 'success', text: t('operationSucceeded', 'Care model updated') });
+      setMessage({
+        kind: 'success',
+        text:
+          dialog.action === 'import' && workspaceImport
+            ? t('workspaceDraftImported', 'Workspace saved as a draft. The published configuration is unchanged.')
+            : t('operationSucceeded', 'Care model updated'),
+      });
     } catch (error) {
       report(error);
     } finally {
       setBusy(false);
     }
   };
-  const requiresIdentity = dialog?.action === 'duplicate' || dialog?.action === 'import';
+  const requiresIdentity = dialog?.action === 'duplicate' || (dialog?.action === 'import' && !workspaceImport);
   const dialogTitles: Record<RegistryAction, string> = {
     duplicate: t('duplicateCareModel', 'Duplicate Care Model'),
     import: t('importCareModel', 'Import Care Model'),
@@ -442,7 +460,7 @@ function Registry() {
           primaryButtonDisabled={
             busy ||
             (requiresIdentity && (!code.trim() || !name.trim() || !privilege)) ||
-            (dialog.action === 'import' && !json.trim())
+            (dialog.action === 'import' && (!json.trim() || !code.trim()))
           }
           onRequestClose={() => !busy && setDialog(null)}
           onRequestSubmit={() => void submit()}
@@ -466,13 +484,70 @@ function Registry() {
               </>
             )}
             {dialog.action === 'import' && (
-              <TextArea
-                id="registry-envelope"
-                labelText={t('importEnvelope', 'Storage envelope JSON')}
-                value={json}
-                onChange={(event) => setJson(event.target.value)}
-                rows={8}
-              />
+              <>
+                <p>
+                  {t(
+                    'importFormatHelp',
+                    'Import an exported storage envelope to create a model, or a workspace definition to update an existing model draft.',
+                  )}
+                </p>
+                <FileUploaderButton
+                  labelText={t('chooseImportJson', 'Choose JSON file')}
+                  accept={['.json']}
+                  multiple={false}
+                  disableLabelChanges
+                  disabled={busy}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    setBusy(true);
+                    setMessage(null);
+                    try {
+                      if (file.size > 2 * 1024 * 1024)
+                        throw new Error(
+                          t('workspaceImportTooLarge', 'The workspace update must be smaller than 2 MB.'),
+                        );
+                      setJson(await file.text());
+                    } catch (error) {
+                      report(error);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                />
+                <TextArea
+                  id="registry-envelope"
+                  labelText={
+                    workspaceImport
+                      ? t('workspaceDefinitionJson', 'Workspace definition JSON')
+                      : t('importEnvelope', 'Storage envelope JSON')
+                  }
+                  value={json}
+                  disabled={busy}
+                  onChange={(event) => setJson(event.target.value)}
+                  rows={8}
+                />
+                {workspaceImport && (
+                  <>
+                    <InlineNotification
+                      kind="info"
+                      hideCloseButton
+                      title={t('workspaceDefinitionDetected', 'Workspace definition detected')}
+                      subtitle={t(
+                        'existingWorkspaceImportHelp',
+                        'Enter the existing model code, such as HIV. Confirm validates and saves a draft while preserving identity, viewing privilege, enrollment policy and existing form UUIDs. New form associations require exact catalog verification. Nothing is published.',
+                      )}
+                    />
+                    <TextInput
+                      id="registry-existing-code"
+                      labelText={t('existingModelCode', 'Existing model code')}
+                      value={code}
+                      disabled={busy}
+                      onChange={(event) => setCode(event.target.value)}
+                    />
+                  </>
+                )}
+              </>
             )}
             {(dialog.action === 'deactivate' || dialog.action === 'reactivate') && (
               <p>{t('confirmLifecycle', 'Change the local availability of {{name}}?', { name: dialog.model?.name })}</p>

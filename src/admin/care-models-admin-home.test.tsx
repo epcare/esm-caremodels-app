@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { navigate } from '@openmrs/esm-framework';
 import CareModelsAdminHome from './care-models-admin-home.component';
+import hivUpdate from '../../configuration/hiv/hiv-workspace-update.json';
 import * as api from '../api/caremodels.resource';
 
 const mutate = vi.fn().mockResolvedValue(undefined);
@@ -13,6 +14,12 @@ vi.mock('../api/caremodels.resource', async (importOriginal) => ({
   fetchEnvelope: vi.fn(),
   duplicateModel: vi.fn(),
   importModel: vi.fn(),
+  fetchModel: vi.fn(),
+  fetchForms: vi.fn(),
+  saveDraft: vi.fn(),
+  validateDefinition: vi.fn(),
+  publishModel: vi.fn(),
+  updateModelMetadata: vi.fn(),
 }));
 vi.mock('@openmrs/esm-framework', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -182,4 +189,93 @@ it('keeps creation actions only in the toolbar when the registry is empty', () =
   expect(within(toolbar).getByRole('button', { name: 'Create New Care Model' })).toBeInTheDocument();
   fireEvent.click(within(toolbar).getByRole('button', { name: 'Import' }));
   expect(screen.getByRole('dialog', { name: 'Import Care Model' })).toBeInTheDocument();
+});
+
+function prepareWorkspaceImport() {
+  const base = structuredClone(hivUpdate);
+  base.enrollment = { enabled: true };
+  vi.mocked(api.fetchModel).mockResolvedValue({ ...model, code: 'HIV' });
+  vi.mocked(api.fetchEnvelope).mockResolvedValue({
+    envelope: JSON.stringify({
+      storageSchemaVersion: '1.0.0',
+      revision: 3,
+      published: { version: '1.0.0', definition: base },
+    }),
+  });
+  vi.mocked(api.validateDefinition).mockResolvedValue({ valid: true });
+  vi.mocked(api.saveDraft).mockResolvedValue({ revision: 4 });
+  render(<CareModelsAdminHome />);
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+  fireEvent.change(screen.getByLabelText('Storage envelope JSON'), { target: { value: JSON.stringify(hivUpdate) } });
+  expect(screen.getByText('Workspace definition detected')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Existing model code'), { target: { value: 'HIV' } });
+}
+it('imports a workspace definition into the existing draft without a create or metadata change', async () => {
+  prepareWorkspaceImport();
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await screen.findByText('Workspace saved as a draft. The published configuration is unchanged.');
+  expect(api.saveDraft).toHaveBeenCalledWith('HIV', expect.objectContaining({ enrollment: { enabled: true } }), 3);
+  expect(api.importModel).not.toHaveBeenCalled();
+  expect(api.publishModel).not.toHaveBeenCalled();
+  expect(api.updateModelMetadata).not.toHaveBeenCalled();
+});
+it('keeps the popup JSON intact when workspace validation fails', async () => {
+  prepareWorkspaceImport();
+  vi.mocked(api.validateDefinition).mockResolvedValue({
+    valid: false,
+    validationErrors: '$.terminology: missing installation concept',
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await screen.findByText('$.terminology: missing installation concept');
+  expect(screen.getByLabelText('Workspace definition JSON')).toHaveValue(JSON.stringify(hivUpdate));
+  expect(api.saveDraft).not.toHaveBeenCalled();
+});
+it('preserves workspace input on revision conflict and never publishes', async () => {
+  prepareWorkspaceImport();
+  vi.mocked(api.saveDraft).mockResolvedValue({ conflict: true, currentRevision: 5 });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await screen.findByText(/Revision conflict: current revision 5/);
+  expect(screen.getByLabelText('Workspace definition JSON')).toHaveValue(JSON.stringify(hivUpdate));
+  expect(api.publishModel).not.toHaveBeenCalled();
+});
+
+it('explains an unknown model code and never loads its envelope or saves', async () => {
+  prepareWorkspaceImport();
+  fireEvent.change(screen.getByLabelText('Existing model code'), { target: { value: 'HIVCT' } });
+  vi.mocked(api.fetchModel).mockRejectedValue({ status: 404 });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await screen.findByText(/No existing Care Model was found for code "HIVCT"/);
+  expect(api.fetchEnvelope).not.toHaveBeenCalled();
+  expect(api.saveDraft).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Workspace definition JSON')).toHaveValue(JSON.stringify(hivUpdate));
+});
+
+it('adds a missing association only after exact OpenMRS form catalog verification', async () => {
+  prepareWorkspaceImport();
+  const base = structuredClone(hivUpdate);
+  const form = base.forms.shift()!;
+  vi.mocked(api.fetchEnvelope).mockResolvedValue({
+    envelope: JSON.stringify({ storageSchemaVersion: '1.0.0', revision: 3, published: { definition: base } }),
+  });
+  vi.mocked(api.fetchForms).mockResolvedValue([
+    {
+      uuid: form.formUuid,
+      name: 'ART',
+      version: '1',
+      published: true,
+      retired: false,
+      encounterType: { uuid: hivUpdate.terminology.encounterTypes['hiv.artClinical'], name: 'ART' },
+      resources: [],
+    },
+  ]);
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await screen.findByText('Workspace saved as a draft. The published configuration is unchanged.');
+  expect(api.fetchForms).toHaveBeenCalled();
+  expect(api.saveDraft).toHaveBeenCalledWith(
+    'HIV',
+    expect.objectContaining({ forms: expect.arrayContaining([form]) }),
+    3,
+  );
+  expect(api.updateModelMetadata).not.toHaveBeenCalled();
 });

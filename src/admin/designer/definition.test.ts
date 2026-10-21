@@ -1,4 +1,4 @@
-import { blankDefinition, moveItem, reorderWidgets, updateDefinitionTab } from './definition';
+import { blankDefinition, duplicateWidget, moveItem, reorderWidgets, updateDefinitionTab } from './definition';
 
 it('editing one tab preserves every other tab and unrelated configuration', () => {
   const definition = blankDefinition();
@@ -38,4 +38,32 @@ it('reorders widgets and their responsive layout rows without dropping dimension
   expect(result.layouts?.wide?.[0]).toEqual({ widgetId: 'b', row: 0, col: 1, w: 8, h: 3 });
   expect(tab.widgets[0].id).toBe('a');
   expect(moveItem(tab.widgets, -1, 0)).toBe(tab.widgets);
+});
+
+it('duplicates widget properties independently and preserves responsive source/layout bindings', () => {
+  const tab = {
+    id: 'overview',
+    label: 'Overview',
+    widgets: [
+      {
+        id: 'metric',
+        type: 'metric' as const,
+        dataSource: 'source',
+        properties: { title: 'Metric', columns: [{ field: 'value', label: 'Result' }] },
+        position: { row: 0, col: 1, w: 6, h: 3 },
+      },
+    ],
+    layouts: {
+      wide: [{ widgetId: 'metric', row: 0, col: 1, w: 6, h: 3 }],
+      narrow: [{ widgetId: 'metric', row: 0, col: 1, w: 12, h: 2 }],
+    },
+  };
+  const next = duplicateWidget(tab, 'metric');
+  expect(next.widgets).toHaveLength(2);
+  expect(next.widgets[1].id).not.toBe('metric');
+  expect(next.widgets[1].dataSource).toBe('source');
+  expect(next.layouts?.wide?.[1]).toMatchObject({ row: 3, w: 6 });
+  expect(next.layouts?.narrow?.[1]).toMatchObject({ row: 2, w: 12 });
+  expect(next.widgets[1].properties).not.toBe(tab.widgets[0].properties);
+  expect(tab.widgets).toHaveLength(1);
 });

@@ -97,21 +97,40 @@ export function useMemberships(patientUuid: string | null, enabled: boolean) {
 
 /** Admin registry listing; requires the manage privilege server-side. */
 export async function fetchRegistryModels(q: string, status?: RegistryModel['status']): Promise<Array<RegistryModel>> {
-  // Request cumulative prefixes: the supplied Java resource paginates in both the DAO
-  // and NeedsPaging. Keeping startIndex=0 avoids applying the offset twice.
-  let limit = 100;
-  let previousLength = -1;
-  for (;;) {
-    const { data } = await openmrsFetch<{ results: Array<RegistryModel>; links?: Array<{ rel: string }> }>(
-      `${careModelsBaseUrl}/model?includeRetired=true&v=default&startIndex=0&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}${status ? `&status=${encodeURIComponent(status)}` : ''}`,
-    );
-    const results = data.results ?? [];
-    if (results.length < limit && !data.links?.some((link) => link.rel === 'next')) return results;
-    if (results.length <= previousLength || limit >= 10000)
-      throw new Error('The server registry page limit was reached. Narrow the registry search.');
-    previousLength = results.length;
-    limit *= 2;
-  }
+  const load = async (search: boolean): Promise<Array<RegistryModel>> => {
+    // Cumulative prefixes also tolerate older deployments that paginated twice.
+    let limit = 100;
+    let previousLength = -1;
+    for (;;) {
+      const params = search
+        ? `includeRetired=true${q ? `&q=${encodeURIComponent(q)}` : ''}${status ? `&status=${encodeURIComponent(status)}` : ''}`
+        : 'includeAll=true';
+      const { data } = await openmrsFetch<{ results: Array<RegistryModel>; links?: Array<{ rel: string }> }>(
+        `${careModelsBaseUrl}/model?${params}&v=default&startIndex=0&limit=${limit}`,
+        { cache: 'no-store' },
+      );
+      if (!data || !Array.isArray(data.results))
+        throw new Error('Invalid Care Models registry response: expected a REST results collection.');
+      const results = data.results;
+      if (results.length < limit && !data.links?.some((link) => link.rel === 'next')) return results;
+      if (results.length <= previousLength || limit >= 10000)
+        throw new Error('The server registry page limit was reached. Narrow the registry search.');
+      previousLength = results.length;
+      limit *= 2;
+    }
+  };
+  const searched = await load(true);
+  if (searched.length) return searched;
+  // RESTWS dispatches custom parameters to doSearch. Older ModelResource builds inherit
+  // an empty implementation. Use only framework-special parameters to reach doGetAll.
+  // Never substitute per-model requests, fabricate registry entries or suppress errors.
+  const listed = await load(false);
+  const query = q.trim().toLowerCase();
+  return listed.filter(
+    (model) =>
+      (!query || `${model.name} ${model.code}`.toLowerCase().includes(query)) &&
+      (!status || (status === 'RETIRED' ? model.retired : model.status === status)),
+  );
 }
 
 export function useRegistry(q = '', status?: RegistryModel['status']) {

@@ -12,9 +12,12 @@ import {
   TableRow,
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
+import type { ObservationField } from './widget-properties';
 import type { TFunction } from 'i18next';
 import { useWidgetData } from '../api/caremodels.resource';
 import type { WidgetInstance } from '../types/caremodels';
+import { WidgetDataState } from './widget-data-state.component';
+import { formatClinicalDate, formatClinicalValue, sortedObservations } from './clinical-format';
 import styles from './widgets.scss';
 
 /**
@@ -37,31 +40,91 @@ export function ClinicalTableWidget({
 
   const [page, setPage] = useState(1);
   const pageSize = Math.max(5, Math.min(50, Number(widget.properties?.pageSize) || 5));
-  const rows = (data?.values ?? []).map((value, index) => ({
+  const values = sortedObservations(
+    data?.values ?? [],
+    widget.properties?.sortOrder !== 'asc',
+    (widget.properties?.sortBy as ObservationField | undefined) ?? 'effectiveTime',
+  );
+  const observationRows = values.map((value, index) => ({
     id: value.obsUuid ?? String(index),
-    value: value.valueName ?? (value.value !== undefined ? String(value.value) : '—'),
-    effectiveTime: value.effectiveTime ?? '—',
+    value: formatClinicalValue(value),
+    valueType: value.valueType,
+    obsUuid: value.obsUuid,
+    effectiveTime: formatClinicalDate(value.effectiveTime),
   }));
 
+  const allowed = (data?.availableFields ?? []).filter((field) => field !== 'currentStates');
+  const recordColumns =
+    (widget.properties?.columns as Array<{ field: string; label: string }> | undefined) ??
+    allowed.slice(0, 6).map((field) => ({ field, label: t(`recordField.${field}`, field) }));
+  const columns = data?.records ? recordColumns : undefined;
+  const cellValue = (field: string, value: unknown) =>
+    value == null
+      ? ''
+      : typeof value === 'boolean'
+        ? value
+          ? t('yes', 'Yes')
+          : t('no', 'No')
+        : typeof value === 'string' || typeof value === 'number'
+          ? /Date$|Time$|dateActivated/.test(field)
+            ? formatClinicalDate(String(value))
+            : String(value)
+          : '';
+  const rows = data?.records
+    ? [...data.records]
+        .sort((a, b) => {
+          const field = String(widget.properties?.sortBy ?? 'effectiveTime');
+          const x = a[field],
+            y = b[field];
+          if (!allowed.includes(field)) return 0;
+          const comparison =
+            typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''));
+          return (widget.properties?.sortOrder === 'asc' ? comparison : -comparison) || a.uuid.localeCompare(b.uuid);
+        })
+        .map((record) => ({
+          id: record.uuid,
+          ...Object.fromEntries(recordColumns.map(({ field }) => [field, cellValue(field, record[field])])),
+        }))
+    : observationRows;
+  const invalidColumns = Boolean(data?.records && recordColumns.some(({ field }) => !allowed.includes(field)));
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / pageSize)));
   return (
     <div className={styles.tableWrapper}>
       <p className={styles.widgetTitle}>{title}</p>
+      <p className={styles.widgetSubtitle}>
+        {data?.records
+          ? t('boundedRecordResults', 'Returned records; source limits and date windows may apply.')
+          : t('boundedObservationResults', 'Returned observation results; source limits and date windows may apply.')}
+      </p>
       {Boolean(widget.properties?.subtitle) && (
         <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
       )}
       {Boolean(widget.properties?.description) && (
         <p className={styles.widgetSubtitle}>{String(widget.properties?.description)}</p>
       )}
-      {error ? (
-        <p className={styles.missingData}>{t('dataUnavailable', 'Data unavailable')}</p>
-      ) : isLoading ? (
-        <p className={styles.missingData}>{t('loading', 'Loading…')}</p>
-      ) : rows.length === 0 ? (
-        <p className={styles.missingData}>{String(widget.properties?.emptyText || t('noRecords', 'No records'))}</p>
+      {invalidColumns ? (
+        <p>{t('invalidRecordColumns', 'Configured columns are not present in this resolver result.')}</p>
+      ) : error || isLoading || (!data?.values?.length && !data?.records?.length) ? (
+        <WidgetDataState
+          error={error}
+          isLoading={isLoading}
+          data={data}
+          emptyMessage={String(
+            widget.properties?.emptyMessage || widget.properties?.emptyText || t('noRecords', 'No records'),
+          )}
+        />
       ) : (
         <>
-          <DataTable rows={rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)} headers={headers(t)}>
+          <DataTable
+            rows={rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+            headers={
+              (columns ?? (widget.properties?.columns as Array<{ field: string; label: string }> | undefined))?.map(
+                (column) => ({
+                  key: column.field,
+                  header: column.label,
+                }),
+              ) ?? headers(t)
+            }>
             {({ rows: tableRows, headers: tableHeaders, getTableProps, getHeaderProps, getRowProps }) => (
               <TableContainer>
                 <Table {...getTableProps()} size="sm">
@@ -94,6 +157,11 @@ export function ClinicalTableWidget({
               </TableContainer>
             )}
           </DataTable>
+          {data?.truncated && (
+            <p>
+              {t('resultsTruncated', 'Additional records exist. Increase the source limit or narrow the date window.')}
+            </p>
+          )}
           {rows.length > pageSize && (
             <Pagination
               page={currentPage}

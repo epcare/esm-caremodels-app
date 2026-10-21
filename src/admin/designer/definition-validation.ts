@@ -5,6 +5,7 @@ import ruleSchema from './schemas/rule-expression.schema.json';
 import formSchema from './schemas/form-ref.schema.json';
 import actionSchema from './schemas/action.schema.json';
 import { parseTree, findNodeAtLocation, printParseErrorCode, type ParseError } from 'jsonc-parser';
+import { widgetPropertyErrors } from '../../widgets/widget-properties';
 import type { ModelDefinition } from '../../types/caremodels';
 
 // Exact copies of the module's schemas. Backend semantic/resource validation is still required.
@@ -25,7 +26,19 @@ export function parseDefinitionJson(text: string): { definition?: ModelDefinitio
         : ['line 1, column 1: JSON document is required'],
     };
   const value: unknown = JSON.parse(text);
-  if (validate(value)) return { definition: value, errors: [] };
+  if (validate(value)) {
+    const errors = value.workspace.tabs.flatMap((tab, tabIndex) =>
+      tab.widgets.flatMap((widget, widgetIndex) => {
+        const node =
+          findNodeAtLocation(tree, ['workspace', 'tabs', tabIndex, 'widgets', widgetIndex, 'properties']) ?? tree;
+        return widgetPropertyErrors(widget).map(
+          (error) =>
+            `/workspace/tabs/${tabIndex}/widgets/${widgetIndex}/properties (${location(node.offset)}): ${error}`,
+        );
+      }),
+    );
+    return errors.length ? { errors } : { definition: value, errors: [] };
+  }
   return {
     errors: (validate.errors ?? []).map((error) => {
       const path = error.instancePath

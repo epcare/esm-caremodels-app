@@ -119,8 +119,10 @@ it('loads a complete registry prefix even when DAO paging suppresses the next li
   respond({ results: [...firstPage, { uuid: 'last-model' }] });
   const models = await fetchRegistryModels('test name');
   expect(models).toHaveLength(101);
-  expect(fetch.mock.calls.at(-2)![0]).toContain('startIndex=0&limit=100&q=test%20name');
-  expect(fetch.mock.calls.at(-1)![0]).toContain('startIndex=0&limit=200&q=test%20name');
+  expect(fetch.mock.calls.at(-2)![0]).toContain('startIndex=0&limit=100');
+  expect(fetch.mock.calls.at(-2)![0]).toContain('q=test%20name');
+  expect(fetch.mock.calls.at(-1)![0]).toContain('startIndex=0&limit=200');
+  expect(fetch.mock.calls.at(-1)![0]).toContain('q=test%20name');
 });
 
 it('preserves server validation paths and messages', async () => {
@@ -178,8 +180,9 @@ it('keeps metadata updates outside the definition and requests the existing mode
 it('passes supported status filters on the registry request', async () => {
   const { fetchRegistryModels } = await import('./caremodels.resource');
   respond({ results: [] });
+  respond({ results: [] });
   await fetchRegistryModels('test', 'INACTIVE');
-  expect(fetch).toHaveBeenLastCalledWith(expect.stringContaining('q=test&status=INACTIVE'));
+  expect(fetch.mock.calls.at(-2)![0]).toContain('q=test&status=INACTIVE');
 });
 
 it('searches real concept metadata using the existing OpenMRS concept resource', async () => {
@@ -192,4 +195,60 @@ it('searches real concept metadata using the existing OpenMRS concept resource',
   );
   expect(fetch.mock.calls.at(-1)![0]).toContain('answers:(uuid,display)');
   expect(fetch.mock.calls.at(-1)![0]).toContain('units');
+});
+
+it('rejects numeric qualifier metadata without a supported backend qualifier contract', () => {
+  expect(() =>
+    parseDataResult(
+      JSON.stringify({
+        type: 'latest-observation',
+        values: [{ obsUuid: 'obs', valueType: 'NUMBER', value: 50, qualifier: '<' }],
+      }),
+    ),
+  ).toThrow('Invalid Care Models clinical result');
+  expect(
+    parseDataResult(
+      JSON.stringify({ type: 'latest-observation', values: [{ obsUuid: 'obs', valueType: 'STRING', value: '<50' }] }),
+    ).values?.[0].value,
+  ).toBe('<50');
+});
+
+it('recovers registry records when custom search parameters hit the inherited empty search handler', async () => {
+  const { fetchRegistryModels } = await import('./caremodels.resource');
+  respond({ results: [] });
+  const model = {
+    uuid: 'model',
+    code: 'HIV',
+    name: 'HIV Patient Care',
+    privilege: 'View HIV',
+    status: 'PUBLISHED',
+    revision: 4,
+    retired: false,
+  };
+  respond({ results: [model] });
+  expect(await fetchRegistryModels('')).toEqual([model]);
+  expect(fetch.mock.calls.at(-1)).toEqual([
+    '/ws/rest/v1/caremodels/model?includeAll=true&v=default&startIndex=0&limit=100',
+    { cache: 'no-store' },
+  ]);
+  expect(fetch.mock.calls.at(-2)![1]).toEqual({ cache: 'no-store' });
+});
+it('applies registry search and status filters locally when the legacy search handler is empty', async () => {
+  const { fetchRegistryModels } = await import('./caremodels.resource');
+  respond({ results: [] });
+  respond({
+    results: [
+      { uuid: 'hiv', code: 'HIV', name: 'HIV care', status: 'PUBLISHED' },
+      { uuid: 'tb', code: 'TB', name: 'TB care', status: 'DRAFT' },
+    ],
+  });
+  expect(await fetchRegistryModels('hiv', 'PUBLISHED')).toEqual([expect.objectContaining({ code: 'HIV' })]);
+});
+it('does not translate malformed registry responses or fallback failures into an empty registry', async () => {
+  const { fetchRegistryModels } = await import('./caremodels.resource');
+  respond({ unexpected: [] });
+  await expect(fetchRegistryModels('')).rejects.toThrow('Invalid Care Models registry response');
+  respond({ results: [] });
+  fetch.mockRejectedValueOnce(new Error('backend unavailable'));
+  await expect(fetchRegistryModels('')).rejects.toThrow('backend unavailable');
 });

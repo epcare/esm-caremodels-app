@@ -1,0 +1,539 @@
+{
+  "metadataRepository": "/Users/lubwamasamuel/Projects/mets/openmrs/modules/epcare-metadata/configuration/ampathforms/epcare",
+  "installationVerified": false,
+  "forms": [
+    {
+      "alias": "hiv.artClinical",
+      "uuid": "12de5bc5-352e-4faf-9961-a2125085a75c",
+      "encounterType": "8d5b2be0-c2cc-11de-8d13-0010c6dffd0f",
+      "name": "HMIS 003 HIV Care ART Card - Clinical Assessment",
+      "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+      "sha256": "2b9ac6c5c2892b0a00bf07a19388de19d465f5bc33a98ced84821dd2989c3190"
+    },
+    {
+      "alias": "hiv.artSummary",
+      "uuid": "52653a60-8300-4c13-be4d-4b746da06fee",
+      "encounterType": "8d5b27bc-c2cc-11de-8d13-0010c6dffd0f",
+      "name": "HMIS ACP HIV 003: HIV CARE ART CARD - Summary Form",
+      "file": "003-HMIS_ACP_ARTCard-SummaryPage .json",
+      "sha256": "d7fc8753fca91b95673cf3edd23b1dd94495165353aefd6a57a9a1baf6abe2be"
+    },
+    {
+      "alias": "hiv.healthEducation",
+      "uuid": "b8224534-7df0-4c00-ba8e-6b1f291087eb",
+      "encounterType": "6d88e370-f2ba-476b-bf1b-d8eaf3b1b67e",
+      "name": "HMIS ACP 003: HIV Care ART Card - Health Education And Psychosocial support Page",
+      "file": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json",
+      "sha256": "ef4e0b43d23ad08c67f782a29b2e22814058afe1582114f10bc8ccdde55dcec7"
+    },
+    {
+      "alias": "hiv.regimenChange",
+      "uuid": "53a3850c-855a-11eb-8dcd-0242ac130003",
+      "encounterType": "c11774c1-3b4a-4bdb-a847-6060895e006d",
+      "name": "ART Regimen Change",
+      "file": "003-HMIS_ACP_ARTCard_RegimenChange.json",
+      "sha256": "32ae1770832d812ea29e31c8158215c314eb02344e94211d2d1f298c64ca453b"
+    },
+    {
+      "alias": "hiv.viralLoadRequest",
+      "uuid": "c0ba84af-d2b3-485f-bede-9c008fbc0d03",
+      "encounterType": "cbf01392-ca29-11e9-a32f-2a2ae2dbcce4",
+      "name": "HMIS ACP 002: Viral Load Request Form",
+      "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+      "sha256": "27e6ce46ae96c8d80af6f6d7b1e3deec82da2c8e585ebe36b2adbe2efcd6cada"
+    },
+    {
+      "alias": "hiv.transferIn",
+      "uuid": "1306e612-3d25-4daa-b1f1-648e20804695",
+      "encounterType": "3e8354f7-31b3-4862-a52e-ff41a1ee60af",
+      "name": "HMIS ACP 008: HIV Care ART Patient Transfer In Form",
+      "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+      "sha256": "089d6c7d8287b50e5725f23e9d13415f8b72900231f561314a6cfc79bbff6d3f"
+    },
+    {
+      "alias": "hiv.transferOut",
+      "uuid": "37be0b17-c62c-4033-90ef-3cbedb7fe0a0",
+      "encounterType": "e305d98a-d6a2-45ba-ba2a-682b497ce27c",
+      "name": "HMIS ACP 008: HIV Care ART Patient Transfer Out Form",
+      "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+      "sha256": "cb7fac25d5723c70d9b8be23b66ce135ea3ed7d25d3d93eb80c3a3a3db4f91de"
+    },
+    {
+      "alias": "hiv.familyTracking",
+      "uuid": "f2722150-5c5f-11ee-8c99-0242ac120002",
+      "encounterType": "591cba6a-5c5f-11ee-8c99-0242ac120002",
+      "name": "HMIS ACP HIV 003: HIV CARE ART CARD - Family Tracking Form",
+      "file": "003-HMIS_ACP_ARTCard-FamilyTracking.json",
+      "sha256": "aed58bf83cd10c83337458717f52b646e7d3fa720127094e98a671c434fd9f94"
+    }
+  ],
+  "concepts": {
+    "artStartDate": {
+      "uuid": "ab505422-26d9-41f1-a079-c3d222000440",
+      "expectedResultType": "DATE",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard-SummaryPage .json",
+          "label": "At ART Start",
+          "rendering": "date"
+        },
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "Date of Treatment Initiation",
+          "rendering": "date"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "ART Start Date",
+          "rendering": "date"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "Date started",
+          "rendering": "date"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "Date started",
+          "rendering": "date"
+        }
+      ]
+    },
+    "initialRegimen": {
+      "uuid": "c3332e8d-2548-4ad6-931d-6855692694a3",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard-SummaryPage .json",
+          "label": "1st line Initial Regimen",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "Baseline Regimen",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "Baseline Regimen",
+          "rendering": "select"
+        }
+      ]
+    },
+    "documentedRegimen": {
+      "uuid": "dd2b0b4d-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard_RegimenChange.json",
+          "label": "New Regimen",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "Current Regimen",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "Current Regimen",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "Current Regimen",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "New Regimen",
+          "rendering": "select"
+        }
+      ]
+    },
+    "documentedRegimenLine": {
+      "uuid": "80148344-ce80-42f7-9d4a-8c1935efe76e",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard_RegimenChange.json",
+          "label": "Current Regimen Line",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "Current Regimen Line",
+          "rendering": "select"
+        }
+      ]
+    },
+    "latestViralLoad": {
+      "uuid": "dc8d83e3-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "NUMBER",
+      "evidence": [
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "VIRAL LOAD QUANTITAIVE",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "HIV Viral Load (copies/ml)",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "HIV Viral Load (copies/ml)",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "HIV Viral Load",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "VL Results at Initiation of IAC (copies/ml)",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "Copies/ml",
+          "rendering": "number"
+        }
+      ]
+    },
+    "viralLoadQualitative": {
+      "uuid": "dca12261-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "VIRAL LOAD QUALITATIVE",
+          "rendering": "radio"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "HIV Viral Load Qualitative",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "HIV Viral Load Qualitative",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "Viral Load Qualitative",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "VL Results After IAC",
+          "rendering": "select"
+        }
+      ]
+    },
+    "latestCd4": {
+      "uuid": "dcbcba2c-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "NUMBER",
+      "evidence": [
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "CD4",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "CD4",
+          "rendering": "number"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "CD4 Test Results",
+          "rendering": "number"
+        }
+      ]
+    },
+    "latestAdherence": {
+      "uuid": "dce03b2f-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "ARV Adherence",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "ARV Adherence",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "Adherence Code",
+          "rendering": "select"
+        }
+      ]
+    },
+    "whoClinicalStage": {
+      "uuid": "dcdff274-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "WHO Clinical Stages",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "Current WHO Clinical Stage",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "WHO Clinical Stage",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "WHO Clinical Stage",
+          "rendering": "select"
+        }
+      ]
+    },
+    "tbStatus": {
+      "uuid": "dce02aa1-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "TB Status",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferInForm.json",
+          "label": "TB Status",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-008-ARTPatientTransferOutForm.json",
+          "label": "TB Status",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-001-Viral-Load Non-SupressedRegister.json",
+          "label": "TB Treatment",
+          "rendering": "radio"
+        }
+      ]
+    },
+    "tptStatus": {
+      "uuid": "37d4ac43-b3b4-4445-b63b-e3acf47c8910",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "TPT Status",
+          "rendering": "select"
+        }
+      ]
+    },
+    "hypertensionStatus": {
+      "uuid": "c8f00db3-abb6-46a2-89a4-25acf95be863",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "HTN Status",
+          "rendering": "select"
+        }
+      ]
+    },
+    "diabetesStatus": {
+      "uuid": "126aecd6-c4de-4b1f-bfa2-8f68380f9329",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "Diabetes Mellitus Status",
+          "rendering": "select"
+        }
+      ]
+    },
+    "nutritionStatus": {
+      "uuid": "165050AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "Nutritional Status",
+          "rendering": "select"
+        }
+      ],
+      "blockedReason": "Exact 36-character CIEL UUID from the form is rejected by the current backend alias schema, which allows dashed UUIDs or 32 hex characters only."
+    },
+    "dsdmModel": {
+      "uuid": "1e755463-df07-4f18-bc67-9e5527bc252f",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json",
+          "label": "DSDM Models",
+          "rendering": "select"
+        },
+        {
+          "file": "HMIS-ACP-002-ViralLoadRequestForm.json",
+          "label": "Treatment Care Approach (DSDM)",
+          "rendering": "select"
+        }
+      ]
+    },
+    "nextReturnDate": {
+      "uuid": "dcac04cf-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "DATE",
+      "evidence": [
+        {
+          "file": "HMIS-HIV-003-HivCareArtCard-ClinicalAssessmentPage.json",
+          "label": "Return date",
+          "rendering": "date"
+        }
+      ]
+    },
+    "regimenChangeType": {
+      "uuid": "ca5a71aa-05f9-42a0-bf0d-65bcfd08036b",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard_RegimenChange.json",
+          "label": "Regimen Change Type",
+          "rendering": "select"
+        }
+      ]
+    },
+    "regimenSubstitutionReason": {
+      "uuid": "dce0c977-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard_RegimenChange.json",
+          "label": "Reason for Regimen Substitution",
+          "rendering": "select"
+        }
+      ]
+    },
+    "regimenSwitchReason": {
+      "uuid": "dce0cd97-30ab-102d-86b0-7a5022ba4115",
+      "expectedResultType": "CODED",
+      "evidence": [
+        {
+          "file": "003-HMIS_ACP_ARTCard_RegimenChange.json",
+          "label": "Reason for regimen switch",
+          "rendering": "select"
+        }
+      ]
+    }
+  },
+  "dsdmDependencyRules": [
+    {
+      "approachUuid": "73313c96-c321-11e8-a355-529269fb1459",
+      "label": "GMH-FBG",
+      "parentModelUuid": "c6563d48-5e16-45e5-ab6f-a64214656801",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "73313728-c321-11e8-a355-529269fb1459",
+      "label": "GMH-CDDP",
+      "parentModelUuid": "c6563d48-5e16-45e5-ab6f-a64214656801",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "b613e170-08d1-4a47-8f35-3d14e0c2a217",
+      "label": "GMH-FSG",
+      "parentModelUuid": "c6563d48-5e16-45e5-ab6f-a64214656801",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "4c6a6a60-97f6-4699-a8e0-927af34288a4",
+      "label": "GMH-Viraemia Clinics",
+      "parentModelUuid": "c6563d48-5e16-45e5-ab6f-a64214656801",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "eb9cc08f-bc65-4a04-97ea-79ab4f85814a",
+      "label": "GMH-G-ANC / PNC",
+      "parentModelUuid": "c6563d48-5e16-45e5-ab6f-a64214656801",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "dcd68a88-30ab-102d-86b0-7a5022ba4115",
+      "label": "Other Specify",
+      "parentModelUuid": null,
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "733139e4-c321-11e8-a355-529269fb1459",
+      "label": "GMC-CCLAD",
+      "parentModelUuid": "b69dc787-8a34-443a-a054-e2a895a10a58",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "0e8c2722-61a5-4658-ab58-4014c991f92a",
+      "label": "GMC-CLDDP",
+      "parentModelUuid": "b69dc787-8a34-443a-a054-e2a895a10a58",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "566e7e03-4024-4299-b12e-ecaa2820698d",
+      "label": "IMC-CRPDDP",
+      "parentModelUuid": "9d1a4797-766e-495f-9387-b92462926fad",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "0fe88771-9ae4-4343-b808-733fc5c31298",
+      "label": "IMC-Drop in centers ",
+      "parentModelUuid": "9d1a4797-766e-495f-9387-b92462926fad",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "dd13f121-fc4c-46c5-b483-b4ef7f154be9",
+      "label": "IMC-Home ART delivery",
+      "parentModelUuid": "9d1a4797-766e-495f-9387-b92462926fad",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "73313f20-c321-11e8-a355-529269fb1459",
+      "label": "IMF- FTDR",
+      "parentModelUuid": "c3c9a3cd-e277-49e8-bd31-e8898a3d14f5",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "733144c0-c321-11e8-a355-529269fb1459",
+      "label": "IMF-FBIM",
+      "parentModelUuid": "c3c9a3cd-e277-49e8-bd31-e8898a3d14f5",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "1a4dfef4-c35b-46e3-b598-1505f59b6e48",
+      "label": "IMF-YAPS",
+      "parentModelUuid": "c3c9a3cd-e277-49e8-bd31-e8898a3d14f5",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "4db8e140-f7b3-44df-8476-d3cebff42ae9",
+      "label": "IMF-Adolescent centers",
+      "parentModelUuid": "c3c9a3cd-e277-49e8-bd31-e8898a3d14f5",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    },
+    {
+      "approachUuid": "6fb363d0-0776-408b-af33-946b8eec40df",
+      "label": "IMF-Holiday treatment children",
+      "parentModelUuid": "c3c9a3cd-e277-49e8-bd31-e8898a3d14f5",
+      "evidenceFile": "HMIS-ACP-003-HivCareArtCard-HealthEducationAndPsychosocialSupportPage.json"
+    }
+  ],
+  "unboundRequiredConcepts": {
+    "dsdmApproach": "73312fee-c321-11e8-a355-529269fb1459",
+    "nutritionStatus": "165050AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  }
+}

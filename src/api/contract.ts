@@ -11,6 +11,7 @@ export function parseDataResult(json: unknown): DataResult {
   if (
     !isRecord(result) ||
     typeof result.type !== 'string' ||
+    (result.units != null && typeof result.units !== 'string') ||
     (result.concept != null && typeof result.concept !== 'string') ||
     (result.values !== undefined &&
       (!Array.isArray(result.values) ||
@@ -18,6 +19,8 @@ export function parseDataResult(json: unknown): DataResult {
           (value) =>
             !isRecord(value) ||
             typeof value.obsUuid !== 'string' ||
+            'qualifier' in value ||
+            'comparator' in value ||
             !['NUMBER', 'CODED', 'STRING', 'DATE'].includes(String(value.valueType)) ||
             (value.effectiveTime != null && typeof value.effectiveTime !== 'string') ||
             (value.valueName != null && typeof value.valueName !== 'string') ||
@@ -28,6 +31,72 @@ export function parseDataResult(json: unknown): DataResult {
         )))
   ) {
     throw new Error('Invalid Care Models clinical result');
+  }
+  const typed = [
+    'encounter-query',
+    'program-state',
+    'order-query',
+    'conditions',
+    'encounter-diagnoses',
+    'patient-summary',
+  ];
+  if (typed.includes(result.type)) {
+    if (result.type === 'patient-summary') {
+      const allowed = ['name', 'gender', 'birthdate', 'birthdateEstimated', 'dead', 'deathDate'];
+      if (
+        !isRecord(result.fields) ||
+        Object.entries(result.fields).some(
+          ([key, value]) =>
+            !allowed.includes(key) || (value !== null && typeof value !== 'string' && typeof value !== 'boolean'),
+        )
+      )
+        throw new Error('Invalid patient summary result');
+    } else if (
+      !Array.isArray(result.records) ||
+      result.records.length > 1000 ||
+      result.records.some((record) => !isRecord(record) || typeof record.uuid !== 'string')
+    )
+      throw new Error('Invalid clinical records result');
+    if (Array.isArray(result.records)) {
+      const textFields = [
+        'name',
+        'clinicalStatus',
+        'certainty',
+        'onsetDate',
+        'endDate',
+        'effectiveTime',
+        'drugName',
+        'action',
+        'dateActivated',
+        'effectiveStopDate',
+        'dateEnrolled',
+        'dateCompleted',
+        'encounterTypeName',
+        'status',
+      ];
+      for (const record of result.records) {
+        if (textFields.some((key) => record[key] != null && typeof record[key] !== 'string'))
+          throw new Error('Invalid clinical record field');
+        if (record.activeAtAssessment != null && typeof record.activeAtAssessment !== 'boolean')
+          throw new Error('Invalid order status');
+        if (
+          record.currentStates !== undefined &&
+          (!Array.isArray(record.currentStates) ||
+            record.currentStates.some(
+              (state: unknown) =>
+                !isRecord(state) || ['uuid', 'stateUuid', 'startDate'].some((key) => typeof state[key] !== 'string'),
+            ))
+        )
+          throw new Error('Invalid program states');
+      }
+      if (
+        result.availableFields !== undefined &&
+        (!Array.isArray(result.availableFields) || result.availableFields.some((field) => typeof field !== 'string'))
+      )
+        throw new Error('Invalid record fields');
+    }
+    if (result.truncated !== undefined && typeof result.truncated !== 'boolean')
+      throw new Error('Invalid clinical result bounds');
   }
   return result as unknown as DataResult;
 }
@@ -78,6 +147,10 @@ function validWidget(value: unknown) {
     typeof value.id === 'string' &&
     typeof value.type === 'string' &&
     (value.dataSource === undefined || typeof value.dataSource === 'string') &&
+    ['formAliases', 'dataSources'].every(
+      (key) =>
+        value[key] === undefined || (Array.isArray(value[key]) && value[key].every((item) => typeof item === 'string')),
+    ) &&
     (value.formAlias === undefined || typeof value.formAlias === 'string') &&
     (value.actionIds === undefined ||
       (Array.isArray(value.actionIds) && value.actionIds.every((id) => typeof id === 'string'))) &&
@@ -112,6 +185,35 @@ export function parseWorkspace(value: unknown): WorkspaceTab {
         value.tabs.some((tab) => !isRecord(tab) || typeof tab.id !== 'string' || typeof tab.label !== 'string')))
   ) {
     throw new Error('Invalid Care Models workspace configuration');
+  }
+  if (value.descriptors !== undefined) {
+    const descriptors = value.descriptors;
+    if (
+      !isRecord(descriptors) ||
+      descriptors.version !== '1.0.0' ||
+      ['forms', 'actions'].some(
+        (key) =>
+          !Array.isArray(descriptors[key]) ||
+          descriptors[key].some(
+            (item: unknown) =>
+              !isRecord(item) ||
+              typeof item[key === 'forms' ? 'alias' : 'id'] !== 'string' ||
+              typeof item.available !== 'boolean' ||
+              ['reason', 'name', 'label', 'type', 'formUuid'].some(
+                (field) => item[field] != null && typeof item[field] !== 'string',
+              ),
+          ),
+      )
+    )
+      throw new Error('Invalid workspace descriptors');
+    const pathway = descriptors.pathway;
+    if (
+      pathway !== undefined &&
+      (!isRecord(pathway) ||
+        typeof pathway.status !== 'string' ||
+        ['stage', 'label', 'enteredAt'].some((key) => pathway[key] != null && typeof pathway[key] !== 'string'))
+    )
+      throw new Error('Invalid member pathway');
   }
   return value as unknown as WorkspaceTab;
 }

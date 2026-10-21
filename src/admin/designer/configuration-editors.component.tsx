@@ -78,7 +78,9 @@ export function DataSourcesEditor({ definition, onChange }: EditorProps) {
       <h3>{t('dataSources', 'Clinical data sources')}</h3>
       <DataSourceBuilder definition={definition} onSave={(next) => onChange(next)} />
       {sources.map(([key]) => {
-        const used = definition.workspace.tabs.some((tab) => tab.widgets.some((widget) => widget.dataSource === key));
+        const used = definition.workspace.tabs.some((tab) =>
+          tab.widgets.some((widget) => widget.dataSource === key || widget.dataSources?.includes(key)),
+        );
         return (
           <Tile key={key}>
             <Stack gap={4}>

@@ -13,10 +13,19 @@ import {
   TabPanels,
   Tabs,
   TextInput,
+  TextArea,
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import type { GridPosition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
-import { bindWidgetSource, manifestFor, sourceCompatibility, widgetManifest } from '../../widgets/widget-registry';
+import {
+  bindWidgetSource,
+  fieldsForSource,
+  manifestFor,
+  sourceCompatibility,
+  widgetManifest,
+} from '../../widgets/widget-registry';
+import { StatusMappingsEditor } from './status-mappings-editor.component';
+import { isStaticWidget } from '../../widgets/widget-properties';
 import { DataSourceBuilder, SourceSettings } from './data-source-builder.component';
 
 export function WidgetInspector({
@@ -41,7 +50,11 @@ export function WidgetInspector({
   const { t } = useTranslation();
   const [createSource, setCreateSource] = useState(false);
   const manifest = manifestFor(widget);
-  const mismatch = manifest?.data ? sourceCompatibility(widget, definition.dataSources[widget.dataSource ?? '']) : null;
+  const mismatch = manifest?.data
+    ? widget.dataSources?.length
+      ? widget.dataSources.map((key) => sourceCompatibility(widget, definition.dataSources[key])).find(Boolean)
+      : sourceCompatibility(widget, definition.dataSources[widget.dataSource ?? ''])
+    : null;
   const property = (key: string, value: unknown) =>
     onWidgetChange({ ...widget, properties: { ...widget.properties, [key]: value } });
   return (
@@ -54,12 +67,14 @@ export function WidgetInspector({
       <TabPanels>
         <TabPanel>
           <Stack gap={5}>
-            <TextInput
-              id="inspector-title"
-              labelText={t('title', 'Title')}
-              value={String(widget.properties?.title ?? '')}
-              onChange={(event) => property('title', event.target.value)}
-            />
+            {!isStaticWidget(widget) && (
+              <TextInput
+                id="inspector-title"
+                labelText={t('title', 'Title')}
+                value={String(widget.properties?.title ?? '')}
+                onChange={(event) => property('title', event.target.value)}
+              />
+            )}
             <Select
               id="inspector-widget-type"
               labelText={t('widgetType', 'Widget type')}
@@ -70,39 +85,151 @@ export function WidgetInspector({
                   ...widget,
                   type: next.type,
                   properties: {
-                    ...widget.properties,
+                    ...Object.fromEntries(
+                      Object.entries(
+                        isStaticWidget({ ...widget, type: next.type }) ? {} : (widget.properties ?? {}),
+                      ).filter(
+                        ([key]) =>
+                          next.configurable.includes(key) &&
+                          ['title', 'subtitle', 'description', 'emptyText', 'emptyMessage'].includes(key),
+                      ),
+                    ),
                     ...next.properties,
-                    presentation: next.id === 'clinical-status' ? 'status' : 'value',
+                    ...(next.type === 'metric'
+                      ? { presentation: next.id === 'clinical-status' ? 'status' : 'value' }
+                      : {}),
                   },
                 };
                 if (!next.data || sourceCompatibility(updated, definition.dataSources[widget.dataSource ?? '']))
                   delete updated.dataSource;
+                if (next.type !== 'trend-chart') delete updated.dataSources;
+                if (next.group === 'layout') {
+                  delete updated.formAlias;
+                  delete updated.actionIds;
+                  delete updated.formAliases;
+                  delete updated.dataSources;
+                }
                 onWidgetChange(updated);
               }}>
               {widgetManifest.map((item) => (
                 <SelectItem key={item.id} value={item.id} text={t(`widget.${item.id}`, item.label)} />
               ))}
             </Select>
-            {['subtitle', 'description'].map((key) => (
-              <TextInput
-                key={key}
-                id={`widget-${key}`}
-                labelText={key === 'subtitle' ? t('subtitle', 'Subtitle') : t('description', 'Description')}
-                value={String(widget.properties?.[key] ?? '')}
-                onChange={(event) => property(key, event.target.value)}
-              />
-            ))}
-            {widget.type === 'form-launcher' && (
-              <Select
-                id="inspector-form"
-                labelText={t('form', 'Form')}
-                value={widget.formAlias ?? ''}
-                onChange={(event) => onWidgetChange({ ...widget, formAlias: event.target.value || undefined })}>
-                <SelectItem value="" text={t('selectForm', 'Select a form')} />
-                {definition.forms.map((form) => (
-                  <SelectItem key={form.alias} value={form.alias} text={form.alias} />
+            {!isStaticWidget(widget) &&
+              ['subtitle', 'description']
+                .filter((key) => manifest?.configurable.includes(key))
+                .map((key) => (
+                  <TextInput
+                    key={key}
+                    id={`widget-${key}`}
+                    labelText={key === 'subtitle' ? t('subtitle', 'Subtitle') : t('description', 'Description')}
+                    value={String(widget.properties?.[key] ?? '')}
+                    onChange={(event) => property(key, event.target.value)}
+                  />
                 ))}
-              </Select>
+            {isStaticWidget(widget) && (
+              <>
+                {['text-note', 'section-heading', 'static-callout'].includes(widget.type) && (
+                  <TextArea
+                    id="static-text"
+                    labelText={t('staticText', 'Text')}
+                    value={String(widget.properties?.text ?? '')}
+                    maxLength={4000}
+                    onChange={(event) => property('text', event.target.value)}
+                  />
+                )}
+                {widget.type === 'section-heading' && (
+                  <Select
+                    id="heading-level"
+                    labelText={t('headingLevel', 'Heading level')}
+                    value={String(widget.properties?.level ?? 2)}
+                    onChange={(event) => property('level', Number(event.target.value))}>
+                    {[2, 3, 4, 5, 6].map((level) => (
+                      <SelectItem key={level} value={String(level)} text={String(level)} />
+                    ))}
+                  </Select>
+                )}
+                {widget.type === 'spacer' && (
+                  <Select
+                    id="spacer-size"
+                    labelText={t('spacing', 'Spacing')}
+                    value={String(widget.properties?.size ?? 'medium')}
+                    onChange={(event) => property('size', event.target.value)}>
+                    {['small', 'medium', 'large'].map((size) => (
+                      <SelectItem key={size} value={size} text={t(size, size)} />
+                    ))}
+                  </Select>
+                )}
+                {widget.type === 'divider' && (
+                  <Select
+                    id="divider-orientation"
+                    labelText={t('orientation', 'Orientation')}
+                    value={String(widget.properties?.orientation ?? 'horizontal')}
+                    onChange={(event) => property('orientation', event.target.value)}>
+                    {['horizontal', 'vertical'].map((value) => (
+                      <SelectItem key={value} value={value} text={t(value, value)} />
+                    ))}
+                  </Select>
+                )}
+                {widget.type === 'static-callout' && (
+                  <>
+                    <TextInput
+                      id="callout-title"
+                      labelText={t('title', 'Title')}
+                      maxLength={100}
+                      value={String(widget.properties?.title ?? '')}
+                      onChange={(event) => property('title', event.target.value)}
+                    />
+                    <Select
+                      id="callout-tone"
+                      labelText={t('severity', 'Severity')}
+                      value={String(widget.properties?.tone ?? 'info')}
+                      onChange={(event) => property('tone', event.target.value)}>
+                      {['info', 'success', 'warning', 'error'].map((value) => (
+                        <SelectItem key={value} value={value} text={t(value, value)} />
+                      ))}
+                    </Select>
+                  </>
+                )}
+              </>
+            )}
+            {widget.type === 'form-launcher' && (
+              <>
+                <TextInput
+                  id="form-button-label"
+                  labelText={t('buttonLabel', 'Button label')}
+                  value={String(widget.properties?.buttonLabel ?? '')}
+                  onChange={(event) => property('buttonLabel', event.target.value)}
+                />
+                <Select
+                  id="inspector-form"
+                  labelText={t('form', 'Form')}
+                  value={widget.formAlias ?? ''}
+                  onChange={(event) => onWidgetChange({ ...widget, formAlias: event.target.value || undefined })}>
+                  <SelectItem value="" text={t('selectForm', 'Select a form')} />
+                  {definition.forms.map((form) => (
+                    <SelectItem key={form.alias} value={form.alias} text={form.alias} />
+                  ))}
+                </Select>
+                {definition.forms.map((form) => (
+                  <Checkbox
+                    key={form.alias}
+                    id={`additional-form-${form.alias}`}
+                    labelText={form.alias}
+                    checked={widget.formAliases?.includes(form.alias) ?? false}
+                    disabled={!widget.formAliases?.includes(form.alias) && (widget.formAliases?.length ?? 0) >= 10}
+                    onChange={(_, { checked }) => {
+                      const aliases = checked
+                        ? [...(widget.formAliases ?? []), form.alias]
+                        : widget.formAliases?.filter((alias) => alias !== form.alias);
+                      const updated = { ...widget };
+                      if (aliases?.length) updated.formAliases = aliases;
+                      else delete updated.formAliases;
+                      onWidgetChange(updated);
+                    }}
+                  />
+                ))}
+              </>
             )}
             {widget.type === 'action-panel' &&
               definition.actions.map((action) => (
@@ -153,6 +280,46 @@ export function WidgetInspector({
                     );
                   })}
                 </Select>
+                {widget.type === 'trend-chart' && (
+                  <>
+                    <p>
+                      {t(
+                        'additionalChartSources',
+                        'Multiple chart sources require matching explicit units. Selecting these replaces the single-source binding.',
+                      )}
+                    </p>
+                    {Object.entries(definition.dataSources)
+                      .filter(([, source]) => !sourceCompatibility(widget, source))
+                      .map(([key, source]) => (
+                        <Checkbox
+                          key={key}
+                          id={`series-${key}`}
+                          labelText={`${key} · ${source.units ?? t('unitsRequired', 'units required')}`}
+                          checked={widget.dataSources?.includes(key) ?? false}
+                          disabled={
+                            !widget.dataSources?.includes(key) &&
+                            ((widget.dataSources?.length ?? 0) >= 8 ||
+                              !source.units ||
+                              Boolean(
+                                widget.dataSources?.some(
+                                  (selected) => definition.dataSources[selected]?.units !== source.units,
+                                ),
+                              ))
+                          }
+                          onChange={(_, { checked }) => {
+                            const keys = checked
+                              ? [...(widget.dataSources ?? []), key]
+                              : widget.dataSources?.filter((id) => id !== key);
+                            const updated = { ...widget };
+                            delete updated.dataSource;
+                            if (keys?.length) updated.dataSources = keys;
+                            else delete updated.dataSources;
+                            onWidgetChange(updated);
+                          }}
+                        />
+                      ))}
+                  </>
+                )}
                 {mismatch && (
                   <InlineNotification
                     kind="warning"
@@ -193,6 +360,17 @@ export function WidgetInspector({
         </TabPanel>
         <TabPanel>
           <Stack gap={5}>
+            {widget.type === 'metric' && (
+              <>
+                <Checkbox
+                  id="metric-show-date"
+                  labelText={t('showDate', 'Show observation date')}
+                  checked={widget.properties?.showDate !== false}
+                  onChange={(_, { checked }) => property('showDate', checked)}
+                />
+                <StatusMappingsEditor widget={widget} definition={definition} onChange={onWidgetChange} />
+              </>
+            )}
             {manifest?.configurable.includes('unit') && (
               <TextInput
                 id="widget-unit"
@@ -209,15 +387,15 @@ export function WidgetInspector({
                   label={t('decimalPlaces', 'Decimal places')}
                   min={0}
                   max={4}
-                  value={Number(widget.properties?.decimals ?? 0)}
+                  value={Number(widget.properties?.precision ?? widget.properties?.decimals ?? 0)}
                   onChange={(_, { value }) => {
                     const n = Number(value);
-                    if (Number.isInteger(n) && n >= 0 && n <= 4) property('decimals', n);
+                    if (Number.isInteger(n) && n >= 0 && n <= 4) property('precision', n);
                   }}
                 />
                 <Checkbox
                   id="show-target-status"
-                  labelText={t('showTargetStatus', 'Show target status')}
+                  labelText={t('showConfiguredReference', 'Show configured reference')}
                   checked={widget.properties?.showStatus === true}
                   onChange={(_, { checked }) => property('showStatus', checked)}
                 />
@@ -251,6 +429,14 @@ export function WidgetInspector({
                   <SelectItem value="line" text={t('lineChart', 'Line chart')} />
                   <SelectItem value="bar" text={t('barChart', 'Bar chart')} />
                 </Select>
+                <Select
+                  id="chart-scale"
+                  labelText={t('chartScale', 'Y-axis scale')}
+                  value={String(widget.properties?.scaleType ?? 'linear')}
+                  onChange={(event) => property('scaleType', event.target.value)}>
+                  <SelectItem value="linear" text={t('linearScale', 'Linear')} />
+                  <SelectItem value="log" text={t('logScale', 'Logarithmic (positive values only)')} />
+                </Select>
                 <Checkbox
                   id="show-data-table"
                   labelText={t('showDataTable', 'Show data table')}
@@ -259,7 +445,7 @@ export function WidgetInspector({
                 />
               </>
             )}
-            {manifest?.data && (
+            {(manifest?.data || widget.type === 'care-plan') && (
               <TextInput
                 id="widget-empty-text"
                 labelText={t('emptyStateText', 'Empty-state text')}
@@ -267,19 +453,113 @@ export function WidgetInspector({
                 onChange={(event) => property('emptyText', event.target.value)}
               />
             )}
-            {widget.type === 'clinical-table' && (
-              <NumberInput
-                id="widget-page-size"
-                label={t('tablePageSize', 'Table page size')}
-                min={5}
-                max={50}
-                value={Number(widget.properties?.pageSize ?? 5)}
-                onChange={(_, { value }) => {
-                  const n = Number(value);
-                  if (Number.isInteger(n) && n >= 5 && n <= 50) property('pageSize', n);
-                }}
-              />
+            {widget.type === 'clinical-table' &&
+              definition.dataSources[widget.dataSource ?? '']?.resultType === 'TABLE' && (
+                <InlineNotification
+                  kind="info"
+                  hideCloseButton
+                  title={t(
+                    'typedTableColumnsReadOnly',
+                    'This backend supports typed record tables with automatic columns. Custom typed columns require a backend schema update.',
+                  )}
+                />
+              )}
+            {widget.type === 'clinical-table' &&
+              definition.dataSources[widget.dataSource ?? '']?.resultType !== 'TABLE' && (
+                <Stack gap={4}>
+                  <h5>{t('tableColumns', 'Observation columns')}</h5>
+                  {fieldsForSource(definition.dataSources[widget.dataSource ?? '']).map((field) => {
+                    const columns = (widget.properties?.columns ??
+                      (definition.dataSources[widget.dataSource ?? '']?.resultType === 'TABLE'
+                        ? fieldsForSource(definition.dataSources[widget.dataSource ?? ''])
+                            .slice(0, 6)
+                            .map((field) => ({ field, label: t(`recordField.${field}`, field) }))
+                        : [
+                            { field: 'value', label: t('value', 'Value') },
+                            { field: 'effectiveTime', label: t('date', 'Date') },
+                          ])) as Array<{ field: string; label: string }>;
+                    const column = columns.find((item) => item.field === field);
+                    return (
+                      <div key={field}>
+                        <Checkbox
+                          id={`column-${field}`}
+                          labelText={t(`observationField.${field}`, field)}
+                          checked={Boolean(column)}
+                          disabled={(Boolean(column) && columns.length === 1) || (!column && columns.length >= 4)}
+                          onChange={(_, { checked }) =>
+                            property(
+                              'columns',
+                              checked
+                                ? [...columns, { field, label: t(`observationField.${field}`, field) }]
+                                : columns.filter((item) => item.field !== field),
+                            )
+                          }
+                        />
+                        {column && (
+                          <TextInput
+                            id={`column-label-${field}`}
+                            labelText={t('columnLabel', 'Column label: {{field}}', { field })}
+                            value={column.label}
+                            maxLength={100}
+                            onChange={(event) =>
+                              property(
+                                'columns',
+                                columns.map((item) =>
+                                  item.field === field ? { ...item, label: event.target.value } : item,
+                                ),
+                              )
+                            }
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                  <Select
+                    id="table-sort-field"
+                    labelText={t('defaultSortField', 'Default sort field')}
+                    value={String(widget.properties?.sortBy ?? 'effectiveTime')}
+                    onChange={(event) => property('sortBy', event.target.value)}>
+                    {fieldsForSource(definition.dataSources[widget.dataSource ?? '']).map((field) => (
+                      <SelectItem key={field} value={field} text={t(`observationField.${field}`, field)} />
+                    ))}
+                  </Select>
+                </Stack>
+              )}
+            {['clinical-table', 'timeline'].includes(widget.type) && (
+              <Select
+                id="records-sort-order"
+                labelText={t('sortOrder', 'Sort order')}
+                value={String(widget.properties?.sortOrder ?? 'desc')}
+                onChange={(event) => property('sortOrder', event.target.value)}>
+                <SelectItem value="desc" text={t('descending', 'Descending')} />
+                <SelectItem value="asc" text={t('ascending', 'Ascending')} />
+              </Select>
             )}
+            {widget.type === 'clinical-table' &&
+              definition.dataSources[widget.dataSource ?? '']?.resultType === 'TABLE' && (
+                <InlineNotification
+                  kind="info"
+                  hideCloseButton
+                  title={t(
+                    'typedTableColumnsReadOnly',
+                    'This backend supports typed record tables with automatic columns. Custom typed columns require a backend schema update.',
+                  )}
+                />
+              )}
+            {widget.type === 'clinical-table' &&
+              definition.dataSources[widget.dataSource ?? '']?.resultType !== 'TABLE' && (
+                <NumberInput
+                  id="widget-page-size"
+                  label={t('tablePageSize', 'Table page size')}
+                  min={5}
+                  max={50}
+                  value={Number(widget.properties?.pageSize ?? 5)}
+                  onChange={(_, { value }) => {
+                    const n = Number(value);
+                    if (Number.isInteger(n) && n >= 5 && n <= 50) property('pageSize', n);
+                  }}
+                />
+              )}
             <Select
               id="loading-policy"
               labelText={t('loadingPolicy', 'Loading policy')}

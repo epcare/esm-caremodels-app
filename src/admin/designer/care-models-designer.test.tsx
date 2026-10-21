@@ -222,3 +222,16 @@ it('blocks incompatible widget bindings before backend validation or publication
   expect(api.validateDefinition).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Publish', exact: true })).toBeDisabled();
 });
+it('requires confirmation before reloading a saved draft and retains edits when cancelled', async () => {
+  render(<ModelEditor modelCode="test" />);
+  fireEvent.change(await screen.findByLabelText('Patient display label'), { target: { value: 'Local draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Reload saved draft' }));
+  const dialog = screen.getByRole('dialog', { name: 'Discard local changes and reload the saved draft?' });
+  expect(api.fetchEnvelope).toHaveBeenCalledTimes(1);
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+  expect(screen.getByLabelText('Patient display label')).toHaveValue('Local draft');
+  fireEvent.click(screen.getByRole('button', { name: 'Reload saved draft' }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Reload latest/ }));
+  await waitFor(() => expect(api.fetchEnvelope).toHaveBeenCalledTimes(2));
+  expect(await screen.findByLabelText('Patient display label')).toHaveValue('Test');
+});

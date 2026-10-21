@@ -21,3 +21,13 @@ it('rejects malformed configuration and forbidden security fields before visual 
     /\/workspace\/tabs\/0\/widgets\/0\/position\/col \(line \d+, column/,
   );
 });
+it('keeps invalid widget properties out of the canonical designer document', () => {
+  const definition = blankDefinition();
+  definition.metadata.display.label = 'Example';
+  definition.workspace.tabs[0].widgets = [
+    { id: 'table', type: 'clinical-table', properties: { columns: [{ field: 'unavailableField', label: 'Bad' }] } },
+  ];
+  const parsed = parseDefinitionJson(JSON.stringify(definition, null, 2));
+  expect(parsed.definition).toBeUndefined();
+  expect(parsed.errors.join()).toMatch(/workspace\/tabs\/0\/widgets\/0\/properties/);
+});

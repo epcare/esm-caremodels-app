@@ -17,7 +17,7 @@ import { ModelPreview } from './model-preview.component';
 import { bindWidgetSource, unavailableWidgets } from '../../widgets/widget-registry';
 import { useTranslation } from 'react-i18next';
 import type { DefinitionTab, GridPosition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
-import { moveItem, reorderWidgets, updateDefinitionTab, widgetManifest } from './definition';
+import { duplicateWidget, moveItem, reorderWidgets, updateDefinitionTab, widgetManifest } from './definition';
 import styles from './designer.scss';
 
 export function WorkspaceEditor({
@@ -199,12 +199,17 @@ export function WorkspaceEditor({
               onChange={(e) => setQuery(e.target.value)}
               size="sm"
             />
-            {(['clinical', 'actions', 'layout'] as const).map((group) => (
+            {(['clinical', 'actions', 'layout', 'advanced'] as const).map((group) => (
               <section key={group}>
                 <h5>
                   {t(
                     `paletteGroup.${group}`,
-                    { clinical: 'Clinical Data', actions: 'Forms & Actions', layout: 'Layout & Content' }[group],
+                    {
+                      clinical: 'Clinical Data',
+                      actions: 'Forms & Actions',
+                      layout: 'Layout & Content',
+                      advanced: 'Advanced / Specialized',
+                    }[group],
                   )}
                 </h5>
                 {widgetManifest
@@ -224,9 +229,13 @@ export function WorkspaceEditor({
                             {
                               id,
                               type: item.type,
+                              componentVersion: item.version,
                               loadingPolicy: 'ON_VISIBLE',
                               position: { row: nextRow, col: 1, ...item.dimensions },
-                              properties: { ...item.properties, title: item.label },
+                              properties: {
+                                ...item.properties,
+                                ...(item.configurable.includes('title') ? { title: item.label } : {}),
+                              },
                             },
                           ],
                         });
@@ -329,6 +338,18 @@ export function WorkspaceEditor({
                   disabled={index === tab.widgets.length - 1}
                   onClick={() => updateTab(reorderWidgets(tab, index, index + 1))}>
                   {t('moveLater', 'Move later')}
+                </Button>
+                <Button
+                  kind="tertiary"
+                  disabled={tab.widgets.length >= 50 || nextRow > 100}
+                  onClick={() => {
+                    const next = duplicateWidget(tab, selected.id);
+                    if (next !== tab) {
+                      updateTab(next);
+                      setSelectedId(next.widgets[next.widgets.length - 1].id);
+                    }
+                  }}>
+                  {t('duplicateWidget', 'Duplicate widget')}
                 </Button>
                 <Button kind="danger--ghost" onClick={removeWidget}>
                   {t('removeWidget', 'Remove widget')}

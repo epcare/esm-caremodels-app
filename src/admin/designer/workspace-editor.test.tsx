@@ -97,3 +97,15 @@ it('creates and binds a source atomically from the inspector and preserves a com
   expect(parseDefinitionJson(JSON.stringify(definition)).errors).toEqual([]);
   expect(definition.workspace.tabs[1].widgets[0].id).toBe('history-metric');
 });
+it('duplicates a configured widget with a new ID and removes only the selected copy', async () => {
+  render(<Editor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Clinical Metric', exact: true }));
+  fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Authored title' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Duplicate widget' }));
+  const definition = JSON.parse(screen.getByTestId('definition').textContent!);
+  expect(definition.workspace.tabs[0].widgets).toHaveLength(2);
+  expect(definition.workspace.tabs[0].widgets[0].id).not.toBe(definition.workspace.tabs[0].widgets[1].id);
+  expect(definition.workspace.tabs[0].widgets[1].properties.title).toBe('Authored title');
+  fireEvent.click(await screen.findByRole('button', { name: /Remove widget/ }));
+  expect(JSON.parse(screen.getByTestId('definition').textContent!).workspace.tabs[0].widgets).toHaveLength(1);
+});

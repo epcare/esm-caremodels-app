@@ -1,3 +1,4 @@
+import { RecordSourceBuilder, RecordSourceSettings } from './record-source-builder.component';
 import React, { useState } from 'react';
 import {
   Button,
@@ -37,6 +38,7 @@ export function DataSourceBuilder({
   widget?: WidgetInstance;
 }) {
   const { t } = useTranslation();
+  const [category, setCategory] = useState('observation');
   const [key, setKey] = useState('');
   const [pickerRevision, setPickerRevision] = useState(0);
   const [alias, setAlias] = useState('');
@@ -66,181 +68,174 @@ export function DataSourceBuilder({
       <Select
         id="source-category"
         labelText={t('sourceCategory', 'Source category')}
-        value="observation"
-        onChange={() => {}}>
+        value={category}
+        onChange={(event) => setCategory(event.target.value)}>
         <SelectItem value="observation" text={t('observation', 'Observation')} />
-        {[
-          'Patient Program',
-          'Condition / Diagnosis',
-          'Encounter',
-          'Medication / Order',
-          'Registered Java Resolver',
-        ].map((label) => (
-          <SelectItem
-            key={label}
-            value={label}
-            text={`${t(`sourceCategory.${label}`, label)} — ${t('resolverUnavailable', 'resolver unavailable')}`}
-            disabled
-          />
-        ))}
+        <SelectItem value="records" text={t('clinicalRecords', 'Clinical records')} />
       </Select>
-      <p>
-        {t(
-          'observationResolverScope',
-          'The registered observation resolver supports one concept per source. Use separate sources and widgets for separate concepts. Other resolver categories are not registered in this backend.',
-        )}
-      </p>
-      <TextInput
-        id="source-key"
-        labelText={t('dataSourceKey', 'Data source key')}
-        value={key}
-        invalid={Boolean(key) && (!validSourceAlias(key) || key in definition.dataSources)}
-        invalidText={t('uniqueSourceKey', 'Enter a unique key starting with a letter.')}
-        onChange={(event) => {
-          setKey(event.target.value);
-          if (!alias || alias === `${key.slice(0, 70)}.concept`)
-            setAlias(event.target.value ? `${event.target.value.slice(0, 70)}.concept` : '');
-        }}
-      />
-      <TextInput
-        id="source-alias"
-        labelText={t('conceptAlias', 'Concept alias')}
-        value={alias}
-        invalid={Boolean(alias) && (!validSourceAlias(alias) || collision)}
-        invalidText={t('conceptAliasCollision', 'Use a valid alias that does not replace another concept.')}
-        onChange={(event) => setAlias(event.target.value)}
-      />
-      <ConceptSelector
-        key={pickerRevision}
-        onSelect={(next) => {
-          setConcept(next);
-          setAnswers([]);
-        }}
-      />
-      {concept && (
+      {category === 'records' ? (
+        <RecordSourceBuilder definition={definition} onSave={onSave} widget={widget} />
+      ) : (
         <>
-          <dl>
-            <dt>{t('concept', 'Concept')}</dt>
-            <dd>{concept.display}</dd>
-            <dt>UUID</dt>
-            <dd>{concept.uuid}</dd>
-            <dt>{t('datatype', 'Datatype')}</dt>
-            <dd>{concept.datatype?.display ?? '—'}</dd>
-            <dt>{t('conceptClass', 'Concept class')}</dt>
-            <dd>{concept.conceptClass?.display ?? '—'}</dd>
-            <dt>{t('units', 'Units')}</dt>
-            <dd>{concept.units ?? '—'}</dd>
-          </dl>
-          {concept.mappings?.map((mapping, index) => (
-            <p key={index}>
-              {mapping.display ??
-                [mapping.conceptReferenceTerm?.conceptSource?.display, mapping.conceptReferenceTerm?.code]
-                  .filter(Boolean)
-                  .join(': ')}
-            </p>
-          ))}
-          {!resultType && (
+          <p>
+            {t(
+              'observationResolverScope',
+              'The registered observation resolver supports one concept per source. Use separate sources and widgets for separate concepts. Select Clinical records for other registered source families.',
+            )}
+          </p>
+          <TextInput
+            id="source-key"
+            labelText={t('dataSourceKey', 'Data source key')}
+            value={key}
+            invalid={Boolean(key) && (!validSourceAlias(key) || key in definition.dataSources)}
+            invalidText={t('uniqueSourceKey', 'Enter a unique key starting with a letter.')}
+            onChange={(event) => {
+              setKey(event.target.value);
+              if (!alias || alias === `${key.slice(0, 70)}.concept`)
+                setAlias(event.target.value ? `${event.target.value.slice(0, 70)}.concept` : '');
+            }}
+          />
+          <TextInput
+            id="source-alias"
+            labelText={t('conceptAlias', 'Concept alias')}
+            value={alias}
+            invalid={Boolean(alias) && (!validSourceAlias(alias) || collision)}
+            invalidText={t('conceptAliasCollision', 'Use a valid alias that does not replace another concept.')}
+            onChange={(event) => setAlias(event.target.value)}
+          />
+          <ConceptSelector
+            key={pickerRevision}
+            onSelect={(next) => {
+              setConcept(next);
+              setAnswers([]);
+            }}
+          />
+          {concept && (
+            <>
+              <dl>
+                <dt>{t('concept', 'Concept')}</dt>
+                <dd>{concept.display}</dd>
+                <dt>UUID</dt>
+                <dd>{concept.uuid}</dd>
+                <dt>{t('datatype', 'Datatype')}</dt>
+                <dd>{concept.datatype?.display ?? '—'}</dd>
+                <dt>{t('conceptClass', 'Concept class')}</dt>
+                <dd>{concept.conceptClass?.display ?? '—'}</dd>
+                <dt>{t('units', 'Units')}</dt>
+                <dd>{concept.units ?? '—'}</dd>
+              </dl>
+              {concept.mappings?.map((mapping, index) => (
+                <p key={index}>
+                  {mapping.display ??
+                    [mapping.conceptReferenceTerm?.conceptSource?.display, mapping.conceptReferenceTerm?.code]
+                      .filter(Boolean)
+                      .join(': ')}
+                </p>
+              ))}
+              {!resultType && (
+                <InlineNotification
+                  kind="warning"
+                  hideCloseButton
+                  title={t(
+                    'unsupportedConceptDatatype',
+                    'This concept datatype is not supported by the registered observation resolver.',
+                  )}
+                />
+              )}
+              {resultType === 'CODED' && (
+                <FilterableMultiSelect<OpenmrsChoice>
+                  id="concept-answers"
+                  titleText={t('validCodedAnswers', 'Valid coded answers')}
+                  placeholder={t('selectCodedAnswers', 'Select answers to bind for enrollment rules')}
+                  items={concept.answers ?? []}
+                  selectedItems={answers}
+                  itemToString={(item) => item?.display ?? ''}
+                  onChange={({ selectedItems }) => setAnswers(selectedItems ?? [])}
+                  helperText={t(
+                    'codedAnswerScope',
+                    'Selected answer UUIDs are added to terminology.codedAnswers. This resolver does not support filtering observation results by an answer.',
+                  )}
+                />
+              )}
+            </>
+          )}
+          <Select
+            id="observation-strategy"
+            labelText={t('selectionStrategy', 'Selection strategy')}
+            value={history ? 'history' : 'latest'}
+            onChange={(event) => setHistory(event.target.value === 'history')}>
+            <SelectItem value="latest" text={t('latestValue', 'Latest value')} />
+            <SelectItem value="history" text={t('recentObservations', 'Recent observations (bounded history)')} />
+          </Select>
+          {history && (
+            <NumberInput
+              id="source-max-results"
+              label={t('maxResults', 'Maximum results')}
+              min={2}
+              max={1000}
+              value={maxResults}
+              onChange={(_, { value }) => {
+                const n = Number(value);
+                if (Number.isInteger(n) && n >= 2 && n <= 1000) setMaxResults(n);
+              }}
+            />
+          )}
+          <NumberInput
+            id="source-window-days"
+            label={t('windowDays', 'Window (days)')}
+            min={1}
+            max={3650}
+            value={windowDays}
+            onChange={(_, { value }) => {
+              const n = Number(value);
+              if (Number.isInteger(n) && n >= 1 && n <= 3650) setWindowDays(n);
+            }}
+          />
+          {mismatch && (
             <InlineNotification
               kind="warning"
               hideCloseButton
-              title={t(
-                'unsupportedConceptDatatype',
-                'This concept datatype is not supported by the registered observation resolver.',
-              )}
+              title={t('incompatibleSource', 'Incompatible data source')}
+              subtitle={t(`sourceCompatibility.${mismatch}`, mismatch)}
             />
           )}
-          {resultType === 'CODED' && (
-            <FilterableMultiSelect<OpenmrsChoice>
-              id="concept-answers"
-              titleText={t('validCodedAnswers', 'Valid coded answers')}
-              placeholder={t('selectCodedAnswers', 'Select answers to bind for enrollment rules')}
-              items={concept.answers ?? []}
-              selectedItems={answers}
-              itemToString={(item) => item?.display ?? ''}
-              onChange={({ selectedItems }) => setAnswers(selectedItems ?? [])}
-              helperText={t(
-                'codedAnswerScope',
-                'Selected answer UUIDs are added to terminology.codedAnswers. This resolver does not support filtering observation results by an answer.',
-              )}
-            />
-          )}
+          <Button
+            kind="tertiary"
+            disabled={
+              !concept ||
+              !resultType ||
+              !validSourceAlias(key) ||
+              !validSourceAlias(alias) ||
+              key in definition.dataSources ||
+              collision ||
+              Boolean(mismatch) ||
+              Object.keys(definition.dataSources).length >= 200
+            }
+            onClick={() => {
+              const codedAnswers = { ...definition.terminology.codedAnswers };
+              for (const answer of answers) codedAnswers[`${alias.slice(0, 55)}.answer-${answer.uuid}`] = answer.uuid;
+              onSave(
+                {
+                  ...definition,
+                  terminology: {
+                    ...definition.terminology,
+                    concepts: { ...definition.terminology.concepts, [alias]: concept!.uuid },
+                    ...(answers.length ? { codedAnswers } : {}),
+                  },
+                  dataSources: { ...definition.dataSources, [key]: source },
+                },
+                key,
+              );
+              setKey('');
+              setAlias('');
+              setConcept(undefined);
+              setPickerRevision((value) => value + 1);
+              setAnswers([]);
+            }}>
+            {t('createDataSource', 'Create data source')}
+          </Button>
         </>
       )}
-      <Select
-        id="observation-strategy"
-        labelText={t('selectionStrategy', 'Selection strategy')}
-        value={history ? 'history' : 'latest'}
-        onChange={(event) => setHistory(event.target.value === 'history')}>
-        <SelectItem value="latest" text={t('latestValue', 'Latest value')} />
-        <SelectItem value="history" text={t('recentObservations', 'Recent observations (bounded history)')} />
-      </Select>
-      {history && (
-        <NumberInput
-          id="source-max-results"
-          label={t('maxResults', 'Maximum results')}
-          min={2}
-          max={1000}
-          value={maxResults}
-          onChange={(_, { value }) => {
-            const n = Number(value);
-            if (Number.isInteger(n) && n >= 2 && n <= 1000) setMaxResults(n);
-          }}
-        />
-      )}
-      <NumberInput
-        id="source-window-days"
-        label={t('windowDays', 'Window (days)')}
-        min={1}
-        max={3650}
-        value={windowDays}
-        onChange={(_, { value }) => {
-          const n = Number(value);
-          if (Number.isInteger(n) && n >= 1 && n <= 3650) setWindowDays(n);
-        }}
-      />
-      {mismatch && (
-        <InlineNotification
-          kind="warning"
-          hideCloseButton
-          title={t('incompatibleSource', 'Incompatible data source')}
-          subtitle={t(`sourceCompatibility.${mismatch}`, mismatch)}
-        />
-      )}
-      <Button
-        kind="tertiary"
-        disabled={
-          !concept ||
-          !resultType ||
-          !validSourceAlias(key) ||
-          !validSourceAlias(alias) ||
-          key in definition.dataSources ||
-          collision ||
-          Boolean(mismatch) ||
-          Object.keys(definition.dataSources).length >= 200
-        }
-        onClick={() => {
-          const codedAnswers = { ...definition.terminology.codedAnswers };
-          for (const answer of answers) codedAnswers[`${alias.slice(0, 55)}.answer-${answer.uuid}`] = answer.uuid;
-          onSave(
-            {
-              ...definition,
-              terminology: {
-                ...definition.terminology,
-                concepts: { ...definition.terminology.concepts, [alias]: concept!.uuid },
-                ...(answers.length ? { codedAnswers } : {}),
-              },
-              dataSources: { ...definition.dataSources, [key]: source },
-            },
-            key,
-          );
-          setKey('');
-          setAlias('');
-          setConcept(undefined);
-          setPickerRevision((value) => value + 1);
-          setAnswers([]);
-        }}>
-        {t('createDataSource', 'Create data source')}
-      </Button>
     </Stack>
   );
 }
@@ -259,7 +254,13 @@ export function SourceSettings({
   const [error, setError] = useState<string | null>(null);
   const source = definition.dataSources[sourceKey];
   if (!source) return null;
-  if (source.type !== 'latest-observation')
+  if (
+    ['program-state', 'encounter-query', 'order-query'].includes(source.type) ||
+    (source.type === 'registered' &&
+      ['conditions', 'encounter-diagnoses', 'patient-summary'].includes(source.resolverId ?? ''))
+  )
+    return <RecordSourceSettings sourceKey={sourceKey} definition={definition} onChange={onChange} />;
+  if (!['latest-observation', 'historical-observations'].includes(source.type))
     return (
       <InlineNotification
         kind="warning"
@@ -274,10 +275,13 @@ export function SourceSettings({
     const next = { ...source, ...patch };
     const boundWidgets = definition.workspace.tabs
       .flatMap((tab) => tab.widgets)
-      .filter((widget) => widget.dataSource === sourceKey);
+      .filter((widget) => widget.dataSource === sourceKey || widget.dataSources?.includes(sourceKey));
     const reason = boundWidgets.map((widget) => sourceCompatibility(widget, next)).find(Boolean);
-    if (reason) {
-      setError(reason);
+    const unitConflict = boundWidgets.some((widget) =>
+      widget.dataSources?.some((key) => key !== sourceKey && definition.dataSources[key]?.units !== next.units),
+    );
+    if (reason || unitConflict) {
+      setError(reason ?? 'Chart series require matching explicit units.');
       return;
     }
     setError(null);

@@ -8,7 +8,10 @@ import { FormLauncherWidget } from './form-launcher.component';
 import { ActionPanelWidget } from './action-panel.component';
 import { TrendChartWidget } from './trend-chart.component';
 import { TimelineWidget } from './timeline.component';
-import styles from './widgets.scss';
+import { CarePlanWidget } from './workspace-descriptors';
+import { RecordWidget } from './record-widget.component';
+import { StaticWidget } from './static-widget.component';
+import { isStaticWidget, widgetPropertyErrors } from './widget-properties';
 
 /**
  * Widget manifest dispatch. Every widget type here is a registered render component; unknown
@@ -28,7 +31,34 @@ export function WidgetRenderer({
 }) {
   const { t } = useTranslation();
 
-  if (['metric', 'clinical-table', 'trend-chart', 'timeline'].includes(widget.type) && !widget.dataSource) {
+  const propertyErrors = widgetPropertyErrors(widget);
+  if (propertyErrors.length)
+    return (
+      <InlineNotification
+        kind="warning"
+        lowContrast
+        hideCloseButton
+        title={t('invalidWidgetConfig', 'Invalid configuration')}
+        subtitle={propertyErrors.join('\n')}
+      />
+    );
+
+  if (isStaticWidget(widget)) return <StaticWidget widget={widget} />;
+
+  if (
+    [
+      'metric',
+      'clinical-table',
+      'trend-chart',
+      'timeline',
+      'condition-list',
+      'medication-summary',
+      'program-summary',
+      'patient-summary',
+    ].includes(widget.type) &&
+    !widget.dataSource &&
+    !(widget.type === 'trend-chart' && widget.dataSources?.length)
+  ) {
     return (
       <InlineNotification
         kind="warning"
@@ -40,6 +70,13 @@ export function WidgetRenderer({
   }
 
   switch (widget.type) {
+    case 'care-plan':
+      return <CarePlanWidget widget={widget} />;
+    case 'condition-list':
+    case 'medication-summary':
+    case 'program-summary':
+    case 'patient-summary':
+      return <RecordWidget widget={widget} patientUuid={patientUuid} modelCode={modelCode} tabId={tabId} />;
     case 'metric':
       return <MetricWidget widget={widget} patientUuid={patientUuid} modelCode={modelCode} tabId={tabId} />;
     case 'clinical-table':

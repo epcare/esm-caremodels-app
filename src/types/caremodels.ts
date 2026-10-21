@@ -18,10 +18,28 @@ export interface CareModelMembership {
 /** Widget instance as authored in the published definition's tab. */
 export interface WidgetInstance {
   id: string;
-  type: 'metric' | 'trend-chart' | 'clinical-table' | 'timeline' | 'form-launcher' | 'action-panel';
+  type:
+    | 'metric'
+    | 'trend-chart'
+    | 'clinical-table'
+    | 'timeline'
+    | 'form-launcher'
+    | 'action-panel'
+    | 'text-note'
+    | 'section-heading'
+    | 'divider'
+    | 'spacer'
+    | 'static-callout'
+    | 'condition-list'
+    | 'medication-summary'
+    | 'program-summary'
+    | 'patient-summary'
+    | 'care-plan';
   componentVersion?: string;
   dataSource?: string;
   actionIds?: Array<string>;
+  formAliases?: Array<string>;
+  dataSources?: Array<string>;
   formAlias?: string;
   loadingPolicy?: 'ON_VISIBLE' | 'EAGER';
   position?: { row: number; col: number; w: number; h: number };
@@ -34,6 +52,13 @@ export interface TabSummary {
   label: string;
 }
 
+export interface WorkspaceDescriptors {
+  version: string;
+  forms: Array<{ alias: string; available: boolean; reason?: string; formUuid?: string; name?: string }>;
+  actions: Array<{ id: string; available: boolean; reason?: string; label?: string; type?: string }>;
+  pathway?: { status: string; stage?: string; label?: string; enteredAt?: string };
+}
+
 /** Inner tab slice served by GET /ws/rest/v1/caremodels/workspace?patient=&model=&tab= */
 export interface WorkspaceTab {
   modelCode: string;
@@ -41,6 +66,7 @@ export interface WorkspaceTab {
   memberUuid: string;
   tabId: string;
   tabLabel: string;
+  descriptors?: WorkspaceDescriptors;
   widgets: Array<WidgetInstance>;
   layouts?: WorkspaceLayouts;
   /** All tabs of the definition; present so the inner-tab strip needs no extra request. */
@@ -50,6 +76,14 @@ export interface WorkspaceTab {
 /** Resolver output (resultJson field of POST /ws/rest/v1/caremodels/data). */
 export interface DataResult {
   type: string;
+  records?: Array<Record<string, unknown> & { uuid: string }>;
+  fields?: Record<string, string | boolean | null>;
+  availableFields?: Array<string>;
+  truncated?: boolean;
+  status?: string;
+  scope?: string;
+  assessedAt?: string;
+  units?: string;
   concept?: string;
   values?: Array<{
     obsUuid: string;
@@ -110,6 +144,7 @@ export interface DataSourceDefinition {
     | 'encounter-query'
     | 'order-query'
     | 'registered';
+  fields?: Array<'name' | 'gender' | 'birthdate' | 'birthdateEstimated' | 'dead' | 'deathDate'>;
   conceptAlias?: string;
   programAlias?: string;
   encounterTypeAlias?: string;

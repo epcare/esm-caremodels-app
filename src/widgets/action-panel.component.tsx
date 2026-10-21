@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { WorkspaceDescriptorContext } from './workspace-descriptors';
 import { Button, ButtonSet } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import type { WidgetInstance } from '../types/caremodels';
@@ -45,8 +46,16 @@ export function ActionPanelWidget({ widget }: { widget: WidgetInstance }) {
  */
 function ActionButton({ actionId, label }: { actionId: string; label: string }) {
   const { t } = useTranslation();
+  const descriptor = useContext(WorkspaceDescriptorContext)?.actions.find((action) => action.id === actionId);
   return (
-    <Button kind="tertiary" disabled title={t('actionPendingConfig', 'This action has not been configured yet')}>
+    <Button
+      kind="tertiary"
+      disabled
+      title={
+        descriptor?.reason
+          ? t(`capabilityReason.${descriptor.reason}`, descriptor.reason)
+          : t('actionPendingConfig', 'This action has not been configured yet')
+      }>
       {label}
     </Button>
   );

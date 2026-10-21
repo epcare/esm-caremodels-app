@@ -47,6 +47,7 @@ import {
   FormsEditor,
   PathwayEditor,
 } from './configuration-editors.component';
+import { WorkspaceDefinitionImport } from './workspace-definition-import.component';
 import { DefinitionJsonEditor } from './definition-json-editor.component';
 import { ModelPreview } from './model-preview.component';
 import { widgetBindingErrors } from '../../widgets/widget-registry';
@@ -136,6 +137,7 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
   };
   const [publishDialog, setPublishDialog] = useState(false);
   const [leaveDialog, setLeaveDialog] = useState(false);
+  const [reloadDialog, setReloadDialog] = useState(false);
   const [baseline, setBaseline] = useState(() =>
     JSON.stringify({ definition: blankDefinition(), name: '', description: '', privilege: '', code: modelCode ?? '' }),
   );
@@ -196,6 +198,13 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
     return () => window.removeEventListener('beforeunload', preventLoss);
   }, [dirty]);
 
+  const reloadSaved = () => {
+    setJsonBuffer(null);
+    setValidationFailure(null);
+    setMessage(null);
+    setReloadDialog(false);
+    setReload((n) => n + 1);
+  };
   const run = async (busyStatus: typeof status, task: () => Promise<void>) => {
     if (operationInProgress.current) return;
     operationInProgress.current = true;
@@ -347,6 +356,12 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
           </div>
         </div>
         <div className={styles.headerActions}>
+          <Button
+            kind="ghost"
+            disabled={!modelCode || status !== 'idle'}
+            onClick={() => (dirty ? setReloadDialog(true) : reloadSaved())}>
+            {t('reloadSavedDraft', 'Reload saved draft')}
+          </Button>
           <Button kind="tertiary" onClick={() => setMode(2)}>
             {t('preview', 'Preview')}
           </Button>
@@ -573,18 +588,43 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
               />
             )}
             {mode === 1 && (
-              <DefinitionJsonEditor
-                value={jsonBuffer ?? definitionJson}
-                errors={jsonErrors}
-                onChange={editJson}
-                onDiscard={() => setJsonBuffer(null)}
-                disabled={status !== 'idle'}
-              />
+              <>
+                <WorkspaceDefinitionImport
+                  definition={definition}
+                  onApply={editDefinition}
+                  disabled={status !== 'idle' || invalidJson}
+                />
+                <DefinitionJsonEditor
+                  value={jsonBuffer ?? definitionJson}
+                  errors={jsonErrors}
+                  onChange={editJson}
+                  onDiscard={() => setJsonBuffer(null)}
+                  disabled={status !== 'idle'}
+                />
+              </>
             )}
           </TabPanel>
           <TabPanel>{mode === 2 && <ModelPreview definition={definition} />}</TabPanel>
         </TabPanels>
       </Tabs>
+      {reloadDialog && (
+        <Modal
+          open
+          modalHeading={t('reloadDraftConfirmation', 'Discard local changes and reload the saved draft?')}
+          primaryButtonText={t('reloadLatest', 'Reload latest')}
+          secondaryButtonText={t('keepEditing', 'Keep editing')}
+          onRequestClose={() => setReloadDialog(false)}
+          onRequestSubmit={reloadSaved}
+          danger
+          preventCloseOnClickOutside>
+          <p>
+            {t(
+              'reloadDraftHint',
+              'This replaces the current definition and JSON buffer with the latest saved version.',
+            )}
+          </p>
+        </Modal>
+      )}
       {leaveDialog && (
         <Modal
           open

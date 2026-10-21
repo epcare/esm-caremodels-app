@@ -81,3 +81,29 @@ export function nextVersion(version?: string) {
   parts[2]++;
   return parts.join('.');
 }
+
+/** Duplicate authored JSON only; preserve source references and independent responsive layouts. */
+export function duplicateWidget(tab: DefinitionTab, id: string): DefinitionTab {
+  const original = tab.widgets.find((widget) => widget.id === id);
+  if (!original || tab.widgets.length >= 50) return tab;
+  const bottom = (size: 'wide' | 'narrow') =>
+    Math.max(
+      0,
+      ...tab.widgets.map((widget, index) => {
+        const pos = tab.layouts?.[size]?.find((item) => item.widgetId === widget.id) ??
+          widget.position ?? { row: index * 2, h: 2 };
+        return pos.row + pos.h;
+      }),
+    );
+  if (bottom('wide') > 100 || (tab.layouts?.narrow && bottom('narrow') > 100)) return tab;
+  const clone = JSON.parse(JSON.stringify(original)) as WidgetInstance;
+  clone.id = `widget-${crypto.randomUUID()}`;
+  clone.position = { ...(original.position ?? { col: 1, w: 6, h: 2 }), row: bottom('wide') };
+  const layouts = { ...tab.layouts };
+  for (const size of ['wide', 'narrow'] as const)
+    if (layouts[size]) {
+      const position = layouts[size]!.find((item) => item.widgetId === id) ?? clone.position;
+      layouts[size] = [...layouts[size]!, { ...position, widgetId: clone.id, row: bottom(size) }];
+    }
+  return { ...tab, widgets: [...tab.widgets, clone], layouts };
+}

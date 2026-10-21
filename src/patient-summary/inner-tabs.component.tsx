@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { InlineNotification, SkeletonPlaceholder, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import { useWorkspaceTab } from '../api/caremodels.resource';
 import type { CareModelMembership, TabSummary, WidgetInstance, WorkspaceTab } from '../types/caremodels';
+import { WorkspaceDescriptorContext } from '../widgets/workspace-descriptors';
 import { WidgetRenderer } from '../widgets/widget-renderer.component';
 import styles from './care-models-summary.scss';
 
@@ -85,18 +86,20 @@ function VisibleWidgets({
     return <EmptyWidgets />;
   }
   return (
-    <div className={styles.widgetGrid}>
-      {tab.widgets.map((widget) => (
-        <DeferredWidget
-          key={widget.id}
-          widget={widget}
-          patientUuid={patientUuid}
-          modelCode={modelCode}
-          tabId={tab.tabId}
-          layouts={tab.layouts}
-        />
-      ))}
-    </div>
+    <WorkspaceDescriptorContext.Provider value={tab.descriptors}>
+      <div className={styles.widgetGrid}>
+        {tab.widgets.map((widget) => (
+          <DeferredWidget
+            key={widget.id}
+            widget={widget}
+            patientUuid={patientUuid}
+            modelCode={modelCode}
+            tabId={tab.tabId}
+            layouts={tab.layouts}
+          />
+        ))}
+      </div>
+    </WorkspaceDescriptorContext.Provider>
   );
 }
 
