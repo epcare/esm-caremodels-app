@@ -8,35 +8,31 @@ on:
   release:
     types:
       - created
-
 env:
-  TURBO_API: 'http://127.0.0.1:9080'
-  TURBO_TOKEN: ${{ secrets.TURBO_SERVER_TOKEN }}
-  TURBO_TEAM: ${{ github.repository_owner }}
+  ESM_NAME: "@epcare/esm-caremodels-app"
+  JS_NAME: "esm-caremodels-app.js"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: read
+    env:
+      TURBO_API: 'http://127.0.0.1:9080'
+      TURBO_TOKEN: local-cache
+      TURBO_TEAM: ${{ github.repository_owner }}
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - name: Use Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
-
-      - name: Enable Corepack
-        run: corepack enable
+          registry-url: "https://registry.npmjs.org"
 
       - name: Cache dependencies
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: '**/node_modules'
+          path: "**/node_modules"
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install dependencies
@@ -44,24 +40,19 @@ jobs:
         run: yarn install --immutable
 
       - name: Setup local cache server for Turborepo
-        uses: felixmosh/turborepo-gh-artifacts@v3
+        uses: felixmosh/turborepo-gh-artifacts@v4
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          server-token: ${{ env.TURBO_TOKEN }}
 
-      - name: Run lint, type checks and tests
-        run: yarn verify
+      - run: yarn verify
+      - run: yarn turbo build --color --concurrency=5
 
-      - name: Run build
-        run: yarn turbo run build --concurrency=5
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
         with:
-          name: packages
+          name: dist
           path: |
-            packages/**/dist
-          overwrite: true
+            dist
 
   pre_release:
     runs-on: ubuntu-latest
@@ -71,47 +62,53 @@ jobs:
     if: ${{ github.event_name == 'push' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Cache dependencies
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: '**/node_modules'
+          path: "**/node_modules"
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
+      - name: Setup local cache server for Turborepo
+        uses: felixmosh/turborepo-gh-artifacts@v4
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Version
-        run: yarn workspaces foreach --worktree --topological --exclude @ugandaemr/esm-orders-app version "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}"
+        # run_number is reused when a failed workflow is rerun, while run_attempt
+        # increments. Including both keeps every npm version immutable and unique.
+        run: yarn version "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}.${{ github.run_attempt }}"
 
       - name: Build
-        run: yarn turbo run build --concurrency=5
+        run: yarn turbo build --color --concurrency=5
 
-      - run: git config user.email "info@thepalladiumgroup.com" && git config user.name "UgandaEMR CI"
+      - run: git config user.email "<>" && git config user.name "EMR CI"
       - run: git add . && git commit -m "Prerelease version" --no-verify
 
+      - name: Configure npm
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > .npmrc
+
       - name: Pre-release
-        run: yarn config set npmAuthToken "${NODE_AUTH_TOKEN}" && yarn run ci:prepublish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+        run: npm publish --access public --tag next
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: packages
+          name: dist
           path: |
-            packages/**/dist
+            dist
           overwrite: true
 
   release:
@@ -122,28 +119,33 @@ jobs:
     if: ${{ github.event_name == 'release' }}
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
+      - uses: actions/checkout@v6
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
 
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "18.x"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Cache dependencies
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: '**/node_modules'
+          path: "**/node_modules"
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
-      - run: yarn turbo run build --color
-      - run: yarn config set npmAuthToken "${NODE_AUTH_TOKEN}" && yarn run ci:publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      - name: Setup local cache server for Turborepo
+        uses: felixmosh/turborepo-gh-artifacts@v4
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure npm
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > .npmrc
+
+      - run: npm publish
