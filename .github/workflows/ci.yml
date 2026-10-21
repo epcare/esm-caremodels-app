@@ -15,10 +15,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      TURBO_API: 'http://127.0.0.1:9080'
-      TURBO_TOKEN: local-cache
-      TURBO_TEAM: ${{ github.repository_owner }}
 
     steps:
       - uses: actions/checkout@v6
@@ -42,13 +38,8 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
-      - name: Setup local cache server for Turborepo
-        uses: felixmosh/turborepo-gh-artifacts@v4
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - run: yarn verify
-      - run: yarn turbo build --color --concurrency=5
+      - run: yarn build
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -87,18 +78,13 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
-      - name: Setup local cache server for Turborepo
-        uses: felixmosh/turborepo-gh-artifacts@v4
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Version
         # run_number is reused when a failed workflow is rerun, while run_attempt
         # increments. Including both keeps every npm version immutable and unique.
-        run: yarn version "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}.${{ github.run_attempt }}"
+        run: yarn version --new-version --no-git-tag-version "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}.${{ github.run_attempt }}"
 
       - name: Build
-        run: yarn turbo build --color --concurrency=5
+        run: yarn build
 
       - run: git config user.email "<>" && git config user.name "EMR CI"
       - run: git add . && git commit -m "Prerelease version" --no-verify
@@ -148,11 +134,6 @@ jobs:
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
-
-      - name: Setup local cache server for Turborepo
-        uses: felixmosh/turborepo-gh-artifacts@v4
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure npm
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > .npmrc
