@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { InlineNotification, SkeletonPlaceholder, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
+import { Button, InlineNotification, SkeletonPlaceholder, Tab, TabList, TabPanel, TabPanels, Tabs } from '@carbon/react';
 import { useWorkspaceTab } from '../api/caremodels.resource';
 import type { CareModelMembership, TabSummary, WidgetInstance, WorkspaceTab } from '../types/caremodels';
 import { WorkspaceDescriptorContext } from '../widgets/workspace-descriptors';
@@ -21,6 +21,7 @@ export function ModelWorkspace({ patientUuid, model }: { patientUuid: string; mo
     data: workspace,
     error,
     isLoading,
+    mutate,
   } = useWorkspaceTab(patientUuid, model.modelCode, activeTabId, model.memberUuid);
 
   if (error) {
@@ -29,9 +30,12 @@ export function ModelWorkspace({ patientUuid, model }: { patientUuid: string; mo
         kind="error"
         lowContrast
         title={t('careModelsWorkspaceError', 'This care model could not be opened')}
-        subtitle={t('careModelsWorkspaceErrorSubtitle', 'It may be unpublished or you may not be authorized.')}
-        hideCloseButton
-      />
+        subtitle={t('careModelsWorkspaceErrorSubtitle', 'Its configuration may be unavailable or your access may have changed.')}
+        hideCloseButton>
+        <Button kind="tertiary" size="sm" onClick={() => void mutate()}>
+          {t('retry', 'Retry')}
+        </Button>
+      </InlineNotification>
     );
   }
 

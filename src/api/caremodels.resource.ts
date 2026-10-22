@@ -145,16 +145,27 @@ export function useWorkspaceTab(
   tabId: string | null,
   memberUuid?: string,
 ) {
+  const { mutate } = useSWRConfig();
   return useSWR<WorkspaceTab>(
     patientUuid && modelCode ? ['caremodels-workspace', patientUuid, modelCode, tabId ?? '', memberUuid ?? ''] : null,
     ([, uuid, code, tab]) => fetchWorkspaceTab(uuid as string, code as string, (tab as string) || null),
-    patientRequestOptions,
+    {
+      ...patientRequestOptions,
+      onError: (error) => {
+        if (isAuthorizationError(error))
+          void mutate(
+            (key) => Array.isArray(key) && key[0] === 'caremodels-memberships' && key[1] === patientUuid,
+            undefined,
+            { revalidate: true },
+          );
+      },
+    },
   );
 }
 
 export function useWidgetData(patientUuid: string, modelCode: string, tabId: string, dataSource: string | null) {
   const { mutate } = useSWRConfig();
-  return useSWR<DataResult>(
+  const result = useSWR<DataResult>(
     patientUuid && modelCode && tabId && dataSource
       ? ['caremodels-data', patientUuid, modelCode, tabId, dataSource]
       : null,
@@ -172,6 +183,7 @@ export function useWidgetData(patientUuid: string, modelCode: string, tabId: str
       },
     },
   );
+  return { ...result, retry: () => result.mutate() };
 }
 
 // ========================

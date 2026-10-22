@@ -23,7 +23,7 @@ export function TimelineWidget({
 }) {
   const { t } = useTranslation();
   const title = (widget.properties?.title as string) ?? widget.id;
-  const { data, error, isLoading } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
+  const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
 
   const records = data?.type === 'encounter-query' ? (data.records ?? []) : [];
   const values = sortedObservations(data?.values ?? [], widget.properties?.sortOrder !== 'asc');
@@ -45,6 +45,7 @@ export function TimelineWidget({
           emptyMessage={String(
             widget.properties?.emptyMessage || widget.properties?.emptyText || t('noEvents', 'No events recorded'),
           )}
+          onRetry={retry}
         />
       ) : (
         <ol className={styles.trendList} aria-label={t('recordedObservations', 'Recorded observations')}>

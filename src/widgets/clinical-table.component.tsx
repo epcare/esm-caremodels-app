@@ -36,7 +36,7 @@ export function ClinicalTableWidget({
 }) {
   const { t } = useTranslation();
   const title = (widget.properties?.title as string) ?? widget.id;
-  const { data, error, isLoading } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
+  const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
 
   const [page, setPage] = useState(1);
   const pageSize = Math.max(5, Math.min(50, Number(widget.properties?.pageSize) || 5));
@@ -112,6 +112,7 @@ export function ClinicalTableWidget({
           emptyMessage={String(
             widget.properties?.emptyMessage || widget.properties?.emptyText || t('noRecords', 'No records'),
           )}
+          onRetry={retry}
         />
       ) : (
         <>

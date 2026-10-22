@@ -34,15 +34,15 @@ describe('CareModelsPatientSummary', () => {
     });
   });
 
-  it('renders nothing and issues no membership request without the master privilege', async () => {
+  it('shows a clear access state and issues no membership request without the master privilege', async () => {
     useSession.mockReturnValue({ data: mockSessionWithoutMasterPrivilege, isLoading: false });
     useMemberships.mockReturnValue({ data: undefined, isLoading: false, error: undefined });
 
-    const { container } = renderSummary();
+    renderSummary();
 
     await waitFor(() => expect(useSession).toHaveBeenCalled());
     expect(useMemberships).not.toHaveBeenCalled();
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText('Care Models access is required')).toBeInTheDocument();
   });
 
   it('renders outer tabs only from the authorized membership response', async () => {
@@ -55,13 +55,18 @@ describe('CareModelsPatientSummary', () => {
     expect(await screen.findByText('HIV Care')).toBeInTheDocument();
   });
 
-  it('shows the empty state when the patient has no active membership', async () => {
+  it('shows a privilege-safe empty state without claiming the patient has no enrollment', async () => {
     useSession.mockReturnValue({ data: mockSessionWithMasterPrivilege, isLoading: false });
     useMemberships.mockReturnValue({ data: [], isLoading: false, error: undefined });
 
     renderSummary();
 
-    expect(await screen.findByText('This patient is not enrolled in any care model.')).toBeInTheDocument();
+    expect(await screen.findByText('No care models available')).toBeInTheDocument();
+    expect(
+      screen.getByText('There are no care models available for you to view for this patient.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/not enrolled/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enroll in a care model' })).not.toBeInTheDocument();
   });
 
   it('shows an error state without disclosing restricted model names', async () => {

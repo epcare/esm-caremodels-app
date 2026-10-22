@@ -11,6 +11,8 @@ export interface CareModelMembership {
   modelCode: string;
   modelName: string;
   displayLabel: string;
+  /** Optional API ordering metadata; older backend builds preserve their returned list order. */
+  displayOrder?: number;
   episodeNumber: number;
   dateEnrolled?: string;
 }

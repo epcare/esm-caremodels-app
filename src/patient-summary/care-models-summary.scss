@@ -128,14 +128,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  justify-content: flex-end;
   margin-bottom: 1rem;
-}
-.enrollmentCount {
-  flex: 1;
-  color: var(--cds-text-secondary);
-}
-.enrollmentToolbar + :global(.cds--inline-notification) {
-  margin-bottom: 1rem;
-  max-width: none;
 }

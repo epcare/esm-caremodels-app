@@ -20,7 +20,7 @@ export function RecordWidget({
   tabId: string;
 }) {
   const { t } = useTranslation();
-  const { data, error, isLoading } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
+  const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
   const expected: Record<string, Array<string>> = {
     'condition-list': ['conditions', 'encounter-diagnoses'],
     'medication-summary': ['order-query'],
@@ -49,6 +49,7 @@ export function RecordWidget({
           error={error}
           isLoading={isLoading}
           emptyMessage={String(widget.properties?.emptyText ?? t('noClinicalRecords', 'No clinical records available'))}
+          onRetry={retry}
         />
       ) : (
         <>

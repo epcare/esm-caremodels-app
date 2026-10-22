@@ -34,8 +34,7 @@
       "order": 10,
       "meta": {
         "columnSpan": 4
-      },
-      "privileges": ["View Care Models"]
+      }
     },
     {
       "name": "care-models-admin-card-link",

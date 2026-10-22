@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SWRConfig } from 'swr';
 import { usePatientUuid } from '../utils/use-patient-uuid';
-import { InlineNotification } from '@carbon/react';
+import { Button, InlineNotification, SkeletonText } from '@carbon/react';
 import { hasMasterPrivilege, useMemberships, useSession } from '../api/caremodels.resource';
+import { isAuthorizationError } from '../api/contract';
 import type { CareModelMembership } from '../types/caremodels';
-import { EnrollmentControls } from './enrollment-controls.component';
+import { MembershipControls } from './enrollment-controls.component';
 import { ModelCards } from './model-cards.component';
 import { ModelWorkspace } from './inner-tabs.component';
 import styles from './care-models-summary.scss';
@@ -13,20 +14,58 @@ import styles from './care-models-summary.scss';
 /**
  * Care Models chart section (designs 1–3): model cards row, then the selected model's workspace
  * with its inner tabs. The ONLY outer-tab source is the authorized membership response. Without
- * the master privilege nothing mounts and no Care Models request is made.
+ * the master privilege the direct page shows an access message and makes no Care Models request.
  */
 export default function CareModelsPatientSummary({ patientUuid: providedUuid }: { patientUuid?: string }) {
   const patientUuid = usePatientUuid(providedUuid);
   const { t } = useTranslation();
-  const { data: session, isLoading: sessionLoading, error: sessionError } = useSession();
+  const {
+    data: session,
+    isLoading: sessionLoading,
+    error: sessionError,
+    mutate: refreshSession,
+  } = useSession();
 
   if (sessionLoading) {
-    return <p className={styles.emptyState}>{t('loading', 'Loading…')}</p>;
+    return <SkeletonText aria-label={t('loading', 'Loading…')} />;
   }
 
-  // no privilege, no mount, no requests: the server would deny them anyway
-  if (sessionError || !hasMasterPrivilege(session)) {
-    return null;
+  if (sessionError) {
+    return (
+      <div className={styles.container}>
+        <p className={styles.heading}>{t('careModels', 'Care Models')}</p>
+        <InlineNotification
+          kind="error"
+          lowContrast
+          title={t('careModelsSessionError', 'Could not verify Care Models access')}
+          subtitle={t('careModelsSessionErrorSubtitle', 'Retry to check your access, then reload this page.')}
+          hideCloseButton>
+          <Button kind="tertiary" size="sm" onClick={() => void refreshSession()}>
+            {t('retry', 'Retry')}
+          </Button>
+        </InlineNotification>
+      </div>
+    );
+  }
+
+  // Keep navigation privilege-gated while making direct URL access explain the restriction.
+  // No membership, workspace, or clinical request is made without the master privilege.
+  if (!hasMasterPrivilege(session)) {
+    return (
+      <div className={styles.container}>
+        <p className={styles.heading}>{t('careModels', 'Care Models')}</p>
+        <InlineNotification
+          kind="warning"
+          lowContrast
+          title={t('careModelsAccessDenied', 'Care Models access is required')}
+          subtitle={t(
+            'careModelsAccessDeniedSubtitle',
+            'You do not have the View Care Models privilege. Contact your administrator if you need access.',
+          )}
+          hideCloseButton
+        />
+      </div>
+    );
   }
 
   return (
@@ -65,14 +104,19 @@ function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
     }
   };
 
+  useEffect(() => {
+    if (memberships && !memberships.some((model) => model.modelCode === selectedCode)) {
+      setSelectedCode(memberships[0]?.modelCode ?? null);
+    }
+  }, [memberships, selectedCode]);
+
   if (!patientUuid)
     return (
       <p className={styles.emptyState}>{t('patientContextUnavailable', 'Open a patient chart to view care models.')}</p>
     );
 
   const controls = (
-    <EnrollmentControls
-      count={!error && !refreshFailed ? memberships?.length : undefined}
+    <MembershipControls
       refreshing={refreshing || Boolean(isLoading || isValidating)}
       onRefresh={() => void refresh()}
     />
@@ -82,10 +126,18 @@ function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
       <>
         {controls}
         <InlineNotification
-          kind="error"
+          kind={isAuthorizationError(error) ? 'warning' : 'error'}
           lowContrast
-          title={t('careModelsLoadError', 'Could not load Care Models')}
-          subtitle={t('careModelsLoadErrorSubtitle', 'You may not be authorized, or the service is unavailable.')}
+          title={
+            isAuthorizationError(error)
+              ? t('careModelsAccessUnavailable', 'Care Models are unavailable for this patient')
+              : t('careModelsLoadError', 'Could not load Care Models')
+          }
+          subtitle={
+            isAuthorizationError(error)
+              ? t('careModelsAccessUnavailableSubtitle', 'Your access may have changed. Refresh or contact an administrator.')
+              : t('careModelsLoadErrorSubtitle', 'The service is unavailable. Use Refresh enrollments to try again.')
+          }
           hideCloseButton
         />
       </>
@@ -95,17 +147,28 @@ function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
     return (
       <>
         {controls}
-        <p className={styles.emptyState}>{t('loading', 'Loading…')}</p>
+        <SkeletonText aria-label={t('loading', 'Loading…')} />
       </>
     );
-  const models: Array<CareModelMembership> = memberships ?? [];
+  const models: Array<CareModelMembership> = memberships
+    ? [...memberships].sort((a, b) =>
+        a.displayOrder !== undefined && b.displayOrder !== undefined ? a.displayOrder - b.displayOrder : 0,
+      )
+    : [];
   if (!models.length)
     return (
       <>
         {controls}
-        <p className={styles.emptyState}>
-          {t('noEnrolledCareModels', 'This patient is not enrolled in any care model.')}
-        </p>
+        <InlineNotification
+          kind="info"
+          lowContrast
+          hideCloseButton
+          title={t('noAuthorizedCareModels', 'No care models available')}
+          subtitle={t(
+            'noAuthorizedCareModelsSubtitle',
+            'There are no care models available for you to view for this patient.',
+          )}
+        />
       </>
     );
   const selected = models.find((model) => model.modelCode === selectedCode) ?? models[0];

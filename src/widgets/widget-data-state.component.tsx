@@ -1,5 +1,6 @@
 import React from 'react';
-import { InlineNotification, SkeletonText } from '@carbon/react';
+import { Button, InlineNotification, SkeletonText } from '@carbon/react';
+import { Renew } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { isAuthorizationError } from '../api/contract';
 import type { DataResult } from '../types/caremodels';
@@ -9,11 +10,13 @@ export function WidgetDataState({
   isLoading,
   data,
   emptyMessage,
+  onRetry,
 }: {
   error?: unknown;
   isLoading: boolean;
   data?: DataResult;
   emptyMessage: string;
+  onRetry?: () => void;
 }) {
   const { t } = useTranslation();
   if (error)
@@ -26,8 +29,13 @@ export function WidgetDataState({
           isAuthorizationError(error)
             ? t('widgetUnauthorized', 'You no longer have access to this clinical information')
             : t('dataUnavailable', 'Data unavailable')
-        }
-      />
+        }>
+        {onRetry && (
+          <Button kind="tertiary" size="sm" renderIcon={Renew} onClick={onRetry}>
+            {t('retry', 'Retry')}
+          </Button>
+        )}
+      </InlineNotification>
     );
   if (isLoading) return <SkeletonText aria-label={t('loading', 'Loading…')} />;
   if (!data?.values?.length) return <p>{emptyMessage}</p>;

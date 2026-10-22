@@ -22,10 +22,10 @@ function mount() {
 }
 beforeEach(() => window.history.replaceState({}, '', '/openmrs/spa/patient/patient-a/chart/care-models'));
 
-it('does not issue membership, workspace or data requests without the master privilege', async () => {
+it('shows an access state and does not issue membership, workspace or data requests without the master privilege', async () => {
   fetch.mockResolvedValue({ data: { authenticated: true, user: { uuid: 'user', privileges: [] } } } as never);
-  const { container } = mount();
-  await waitFor(() => expect(container).toBeEmptyDOMElement());
+  mount();
+  expect(await screen.findByText('Care Models access is required')).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(String(fetch.mock.calls[0][0])).toMatch(/\/session$/);
 });
@@ -82,7 +82,11 @@ it('switches between enrolled models and reacts to patient route changes without
     window.history.replaceState({}, '', '/openmrs/spa/patient/patient-b/chart/care-models');
     window.dispatchEvent(new Event('single-spa:routing-event'));
   });
-  expect(await screen.findByText('This patient is not enrolled in any care model.')).toBeInTheDocument();
+  expect(await screen.findByText('No care models available')).toBeInTheDocument();
+  expect(
+    screen.getByText('There are no care models available for you to view for this patient.'),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Enroll in a care model' })).not.toBeInTheDocument();
   expect(calls().every((call) => call.patient === 'patient-a')).toBe(true);
   expect(fetch.mock.calls.some(([url]) => /\/model(?:\?|\/|$)/.test(String(url)))).toBe(false);
 });
@@ -113,12 +117,12 @@ it('refreshes externally created enrollments without fetching the admin registry
     } as never;
   });
   mount();
-  expect(await screen.findByText('Active enrollments: 0')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Enroll in a care model' })).toBeDisabled();
+  expect(await screen.findByText('No care models available')).toBeInTheDocument();
+  expect(screen.queryByText('Active enrollments: 0')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Enroll in a care model' })).not.toBeInTheDocument();
   enrolled = true;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh enrollments' }));
   expect(await screen.findByText('Episode 2')).toBeInTheDocument();
-  expect(screen.getByText('Active enrollments: 1')).toBeInTheDocument();
   expect(screen.getByText('Enrollment date unavailable')).toBeInTheDocument();
   expect(fetch.mock.calls.filter(([url]) => String(url).includes('/membership'))).toHaveLength(2);
   expect(fetch.mock.calls.some(([url]) => /\/model(?:\?|\/|$)/.test(String(url)))).toBe(false);
@@ -156,9 +160,32 @@ it('removes cached model names and clinical content when enrollment refresh is d
   expect(await screen.findByText('restricted-model')).toBeInTheDocument();
   denied = true;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh enrollments' }));
-  expect(await screen.findByText('Could not load Care Models')).toBeInTheDocument();
+  expect(await screen.findByText('Care Models are unavailable for this patient')).toBeInTheDocument();
   expect(screen.queryByText('restricted-model')).not.toBeInTheDocument();
   expect(screen.queryByText('Active enrollments: 1')).not.toBeInTheDocument();
+});
+
+it('refreshes memberships when access to a selected workspace is revoked', async () => {
+  let membershipCalls = 0;
+  fetch.mockImplementation(async (url) => {
+    const path = String(url);
+    if (path.endsWith('/session'))
+      return {
+        data: { authenticated: true, user: { uuid: 'user', privileges: [{ name: 'View Care Models' }] } },
+      } as never;
+    if (path.includes('/membership')) {
+      membershipCalls += 1;
+      return { data: { results: membershipCalls === 1 ? [membership('revoked-model')] : [] } } as never;
+    }
+    if (path.includes('/workspace')) throw Object.assign(new Error('Forbidden'), { status: 403 });
+    throw new Error(`Unexpected request: ${path}`);
+  });
+
+  mount();
+  await waitFor(() => expect(membershipCalls).toBeGreaterThan(1));
+  expect(await screen.findByText('No care models available')).toBeInTheDocument();
+  expect(screen.queryByText('revoked-model')).not.toBeInTheDocument();
+  expect(fetch.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
 });
 
 it('loads a fresh default workspace when a model receives a new enrollment episode', async () => {

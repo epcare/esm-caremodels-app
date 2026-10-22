@@ -25,7 +25,7 @@ export function MetricWidget({
 }) {
   const { t } = useTranslation();
   const title = (widget.properties?.title as string) ?? widget.id;
-  const { data, error, isLoading } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
+  const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
 
   return (
     <Tile className={styles.metricTile}>
@@ -33,7 +33,7 @@ export function MetricWidget({
       {Boolean(widget.properties?.subtitle) && (
         <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
       )}
-      <MetricValue widget={widget} data={data} error={error} isLoading={isLoading} />
+      <MetricValue widget={widget} data={data} error={error} isLoading={isLoading} onRetry={retry} />
     </Tile>
   );
 }
@@ -43,11 +43,13 @@ function MetricValue({
   data,
   error,
   isLoading,
+  onRetry,
 }: {
   widget: WidgetInstance;
   data?: DataResult;
   error?: unknown;
   isLoading: boolean;
+  onRetry?: () => void;
 }) {
   const { t } = useTranslation();
   if (error || isLoading || !data?.values?.length)
@@ -61,6 +63,7 @@ function MetricValue({
             widget.properties?.emptyText ||
             t('noMeasurement', 'No measurement recorded'),
         )}
+        onRetry={onRetry}
       />
     );
   const latest = data.values[0];

@@ -41,10 +41,10 @@ export function TrendChartWidget({
   modelCode: string;
   tabId: string;
 }) {
-  const { data, error, isLoading } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
+  const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
   if (widget.dataSources?.length)
     return <MultiTrendChart widget={widget} patientUuid={patientUuid} modelCode={modelCode} tabId={tabId} />;
-  return <TrendChartView widget={widget} data={data} error={error} isLoading={isLoading} />;
+  return <TrendChartView widget={widget} data={data} error={error} isLoading={isLoading} onRetry={retry} />;
 }
 
 function TrendChartView({
@@ -52,11 +52,13 @@ function TrendChartView({
   data,
   error,
   isLoading,
+  onRetry,
 }: {
   widget: WidgetInstance;
   data?: DataResult;
   error?: unknown;
   isLoading: boolean;
+  onRetry?: () => void;
 }) {
   const { t } = useTranslation();
   const logarithmic = widget.properties?.scaleType === 'log';
@@ -82,6 +84,7 @@ function TrendChartView({
               widget.properties?.emptyText ||
               t('noChartData', 'No dated numeric measurements recorded'),
           )}
+          onRetry={onRetry}
         />
       ) : (
         <>
@@ -214,6 +217,7 @@ function MultiTrendChart({
       data={data}
       error={results.find((result) => result.error)?.error}
       isLoading={results.some((result) => result.isLoading)}
+      onRetry={() => Promise.all(results.map((result) => result.retry()))}
     />
   );
 }
