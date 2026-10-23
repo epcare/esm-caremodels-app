@@ -103,6 +103,7 @@ export interface ManualEnrollmentOption {
   displayLabel: string;
   category?: string | null;
   requiresReason: boolean;
+  requiresConfirmation: boolean;
   alreadyEnrolled: boolean;
   openStatus?: string | null;
   eligible: boolean;

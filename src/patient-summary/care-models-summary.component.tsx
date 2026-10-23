@@ -13,7 +13,7 @@ import {
 import { isAuthorizationError } from '../api/contract';
 import type { CareModelMembership } from '../types/caremodels';
 import { MembershipControls } from './enrollment-controls.component';
-import { EnrollmentModal } from './enrollment-modal.component';
+import { launchEnrollmentWorkspace } from './enrollment-workspace.component';
 import { ModelCards } from './model-cards.component';
 import { ModelWorkspace } from './inner-tabs.component';
 import styles from './care-models-summary.scss';
@@ -126,7 +126,7 @@ function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | nul
     <MembershipControls
       refreshing={refreshing || Boolean(isLoading || isValidating)}
       onRefresh={() => void refresh()}
-      onEnroll={canEnroll && patientUuid ? () => setEnrolling(true) : undefined}
+      onEnroll={canEnroll && patientUuid ? () => launchEnrollmentWorkspace(patientUuid) : undefined}
     />
   );
   if (error || refreshFailed) {
@@ -180,27 +180,9 @@ function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | nul
       </>
     );
   const selected = models.find((model) => model.modelCode === selectedCode) ?? models[0];
-  const handleEnrolled = async (modelCode: string) => {
-    setEnrolling(false);
-    await refresh();
-    setSelectedCode(modelCode);
-    showSnackbar({
-      kind: 'success',
-      isLowContrast: true,
-      title: t('enrolledTitle', 'Enrollment successful'),
-      subtitle: t('enrolledSubtitle', 'The care model workspace is now available for this patient.'),
-    });
-  };
   return (
     <>
       {controls}
-      {enrolling && patientUuid && (
-        <EnrollmentModal
-          patientUuid={patientUuid}
-          onClose={() => setEnrolling(false)}
-          onEnrolled={(modelCode) => void handleEnrolled(modelCode)}
-        />
-      )}
       <ModelCards
         models={models.map((model) => ({
           modelUuid: model.modelUuid,

@@ -26,7 +26,9 @@
         "path": "care-models",
         "layoutMode": "anchored"
       },
-      "privileges": ["View Care Models"]
+      "privileges": [
+        "View Care Models"
+      ]
     },
     {
       "name": "care-models-patient-summary",
@@ -42,7 +44,25 @@
       "component": "careModelsAdminCardLink",
       "slot": "system-admin-page-card-link-slot",
       "order": 20,
-      "privileges": ["Task: caremodels.model.manage"]
+      "privileges": [
+        "Task: caremodels.model.manage"
+      ]
+    },
+    {
+      "name": "care-model-enrollment-launcher",
+      "component": "careModelEnrollmentLauncher",
+      "slot": "patient-actions-slot",
+      "order": 900,
+      "privileges": [
+        "Task: caremodels.member.transition"
+      ]
+    }
+  ],
+  "workspaces2": [
+    {
+      "name": "care-model-enrollment",
+      "component": "careModelEnrollmentWorkspace",
+      "title": "Enroll in care model"
     }
   ]
 }

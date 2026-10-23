@@ -205,6 +205,25 @@ export async function fetchManualEnrollmentOptions(patientUuid: string): Promise
   return data.results ?? [];
 }
 
+export interface EnrollmentCheck {
+  modelCode: string;
+  status: 'ELIGIBLE' | 'REQUIRES_CONFIRMATION' | 'ALREADY_ENROLLED' | 'NOT_ELIGIBLE';
+  canEnroll: boolean;
+  requiresReason: boolean;
+  requiresConfirmation: boolean;
+  reasons: Array<string>;
+}
+
+/** Explicit eligibility evaluation; runs the model's policy on request, never persists. */
+export async function fetchEnrollmentCheck(patientUuid: string, model: string): Promise<EnrollmentCheck> {
+  const { data } = await openmrsFetch(`${restBaseUrl}/caremodels/enrollmentcheck`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient: patientUuid, model }),
+  });
+  return data;
+}
+
 export interface ManualEnrollmentRequest {
   operation: 'manual';
   patient: string;

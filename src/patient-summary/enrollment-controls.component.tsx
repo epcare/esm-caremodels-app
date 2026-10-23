@@ -1,5 +1,5 @@
 import React from 'react';
-import { IconButton } from '@carbon/react';
+import { Button, IconButton } from '@carbon/react';
 import { Add, Renew } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import styles from './care-models-summary.scss';
@@ -21,14 +21,9 @@ export function MembershipControls({
   return (
     <div className={styles.enrollmentToolbar}>
       {onEnroll && (
-        <IconButton
-          kind="ghost"
-          size="sm"
-          label={t('enrollInCareModel', 'Enroll in a care model')}
-          onClick={onEnroll}
-          align="bottom-end">
-          <Add />
-        </IconButton>
+        <Button kind="primary" size="sm" renderIcon={Add} onClick={onEnroll}>
+          {t('enrollPatientInCareModel', 'Enroll patient in a care model')}
+        </Button>
       )}
       <IconButton kind="ghost" size="sm" label={label} disabled={refreshing} onClick={onRefresh} align="bottom-end">
         <Renew />

@@ -183,3 +183,33 @@
   border: 1px solid var(--cds-border-subtle);
   border-radius: 6px;
 }
+
+.enrollmentWorkspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.enrollmentPatientContext {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-bottom: 0.5rem;
+  border-block-end: 1px solid var(--cds-border-subtle);
+}
+
+.enrollmentWorkspace section h5 {
+  margin: 0 0 0.375rem;
+}
+
+.enrollmentWorkspaceFooter {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  background: var(--cds-layer);
+  border-block-start: 1px solid var(--cds-border-subtle);
+}

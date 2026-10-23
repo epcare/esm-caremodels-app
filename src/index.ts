@@ -18,6 +18,15 @@ export function startupApp() {
 
 // t('careModels', 'Care Models') — left-nav chart dashboard entry on the patient page
 export const careModelsSummaryDashboardLink = getSyncLifecycle(createDashboard(dashboardMeta), options);
+export const careModelEnrollmentWorkspace = getAsyncLifecycle(
+  () => import('./patient-summary/enrollment-workspace.component'),
+  options,
+);
+export const careModelEnrollmentLauncher = getAsyncLifecycle(
+  // Overflow-menu item in the chart's patient-actions rail; launches the enrollment workspace.
+  () => import('./patient-summary/enrollment-launcher.component'),
+  options,
+);
 
 // the summary space on the patient chart: enrolled-only outer tabs + inner-tab workspace
 export const careModelsPatientSummary = getAsyncLifecycle(
