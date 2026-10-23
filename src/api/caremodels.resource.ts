@@ -302,6 +302,23 @@ export async function searchOpenmrsResources(
   return data.results;
 }
 
+/** Resolves the display name of a stored terminology reference by its exact UUID (plain REST read). */
+export async function fetchOpenmrsResource(
+  resource: 'concept' | 'program' | 'encountertype' | 'form',
+  uuid: string,
+): Promise<OpenmrsChoice> {
+  const { data } = await openmrsFetch<OpenmrsChoice>(`${restBaseUrl}/${resource}/${encodeURIComponent(uuid)}?v=default`);
+  return data;
+}
+
+/** Datatype detail of a stored concept reference, used to derive the read-only result type. */
+export async function fetchConceptDetails(uuid: string): Promise<OpenmrsConcept> {
+  const { data } = await openmrsFetch<OpenmrsConcept>(
+    `${restBaseUrl}/concept/${encodeURIComponent(uuid)}?v=custom:(uuid,display,datatype:(uuid,display,name))`,
+  );
+  return data;
+}
+
 /** Custom core form representation supplied for Care Models form-alias configuration. */
 export interface OpenmrsForm {
   uuid: string;

@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@carbon/react';
+import { ArrowRight } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import type { ObservationField } from './widget-properties';
 import type { TFunction } from 'i18next';
@@ -90,12 +91,15 @@ export function ClinicalTableWidget({
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / pageSize)));
   return (
     <div className={styles.tableWrapper}>
-      <p className={styles.widgetTitle}>{title}</p>
-      <p className={styles.widgetSubtitle}>
-        {data?.records
-          ? t('boundedRecordResults', 'Returned records; source limits and date windows may apply.')
-          : t('boundedObservationResults', 'Returned observation results; source limits and date windows may apply.')}
-      </p>
+      <div className={styles.chartHeader}>
+        <p className={styles.widgetTitle}>{title}</p>
+        {Boolean(widget.properties?.viewAllLabel) && (
+          <span className={styles.viewAllLink}>
+            {String(widget.properties?.viewAllLabel)}
+            <ArrowRight size={16} aria-hidden="true" />
+          </span>
+        )}
+      </div>
       {Boolean(widget.properties?.subtitle) && (
         <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
       )}
@@ -181,7 +185,7 @@ export function ClinicalTableWidget({
 
 function headers(t: TFunction) {
   return [
-    { key: 'value', header: t('value', 'Value') },
     { key: 'effectiveTime', header: t('date', 'Date') },
+    { key: 'value', header: t('value', 'Result') },
   ];
 }

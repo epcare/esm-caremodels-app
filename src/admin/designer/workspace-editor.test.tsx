@@ -28,6 +28,29 @@ it('adds a widget in the current tab and preserves other tabs', () => {
     'Renamed metric',
   );
 });
+it('resizes a canvas widget by dragging its corner and persists the resulting grid dimensions', () => {
+  render(<Editor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Clinical Metric', exact: true }));
+  const handle = screen.getByRole('button', { name: 'Resize Clinical Metric' });
+  const canvasGrid = screen.getByTestId('workspace-canvas') as HTMLDivElement;
+  Object.defineProperty(canvasGrid, 'clientWidth', { configurable: true, value: 1200 });
+  canvasGrid.style.gridTemplateColumns = Array(12).fill('100px').join(' ');
+  canvasGrid.style.gridTemplateRows = '32px 32px 32px 32px';
+  canvasGrid.style.columnGap = '0px';
+  canvasGrid.style.rowGap = '16px';
+  fireEvent.pointerDown(handle, { pointerId: 1, clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(handle, { pointerId: 1, clientX: 100, clientY: 48 });
+  fireEvent.pointerUp(handle, { pointerId: 1 });
+
+  const definition = JSON.parse(screen.getByTestId('definition').textContent!);
+  const widgetId = definition.workspace.tabs[0].widgets[0].id;
+  expect(definition.workspace.tabs[0].layouts.wide.find((item) => item.widgetId === widgetId)).toMatchObject({
+    w: 7,
+    h: 4,
+  });
+  expect(screen.getByLabelText('Width')).toHaveValue(7);
+  expect(screen.getByLabelText('Height')).toHaveValue(4);
+});
 it('adds/removes sections while preserving a valid default tab', () => {
   render(<Editor />);
   fireEvent.click(screen.getByRole('button', { name: 'Add section' }));

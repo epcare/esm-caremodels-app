@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Button,
   Checkbox,
@@ -8,7 +8,6 @@ import {
   SelectItem,
   Stack,
   TextInput,
-  Tile,
 } from '@carbon/react';
 import { Draggable, Edit } from '@carbon/react/icons';
 import { WidgetPreview } from './widget-preview.component';
@@ -34,6 +33,16 @@ export function WorkspaceEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [size, setSize] = useState<'wide' | 'narrow'>('wide');
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const resizeStart = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    columnStep: number;
+    rowStep: number;
+  } | null>(null);
   const tabs = definition.workspace.tabs;
   const tab = tabs.find((item) => item.id === tabId) ?? tabs[0];
   const nextRow = Math.max(
@@ -52,18 +61,72 @@ export function WorkspaceEditor({
     ? (tab.layouts?.[size]?.find((item) => item.widgetId === selected.id) ??
       selected.position ?? { row: index * 2, col: 1, w: 6, h: 2 })
     : null;
-  const updatePosition = (key: keyof GridPosition, value: number) => {
-    if (!selected || !position) return;
-    const next = { row: position.row, col: position.col, w: position.w, h: position.h, [key]: value };
-    next.w = Math.max(1, Math.min(next.w, 13 - next.col));
-    const items = tab.layouts?.[size] ?? [];
+  const setPosition = (positionWidgetId: string, layoutSize: 'wide' | 'narrow', next: GridPosition) => {
+    const items = tab.layouts?.[layoutSize] ?? [];
     updateTab({
       ...tab,
       layouts: {
         ...tab.layouts,
-        [size]: [...items.filter((item) => item.widgetId !== selected.id), { widgetId: selected.id, ...next }],
+        [layoutSize]: [...items.filter((item) => item.widgetId !== positionWidgetId), { widgetId: positionWidgetId, ...next }],
       },
     });
+  };
+  const updatePosition = (key: keyof GridPosition, value: number) => {
+    if (!selected || !position) return;
+    const next = { ...position, [key]: value };
+    next.row = Math.max(0, Math.min(100, next.row));
+    next.col = Math.max(1, Math.min(12, next.col));
+    next.w = Math.max(1, Math.min(12, 13 - next.col, next.w));
+    next.h = Math.max(1, Math.min(20, next.h));
+    setPosition(selected.id, size, next);
+  };
+  const adjustWidgetSize = (widgetId: string, widgetPosition: GridPosition, key: 'w' | 'h', value: number) => {
+    const next = { ...widgetPosition, [key]: value };
+    next.w = Math.max(1, Math.min(13 - next.col, 12, next.w));
+    next.h = Math.max(1, Math.min(20, next.h));
+    setSelectedId(widgetId);
+    setPosition(widgetId, size, next);
+  };
+  const beginResize = (event: React.PointerEvent<HTMLButtonElement>, widgetId: string, widgetPosition: GridPosition) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedId(widgetId);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const styles = window.getComputedStyle(canvas);
+    const width = canvas.clientWidth || canvas.getBoundingClientRect().width;
+    const columnGap = Number.parseFloat(styles.columnGap) || 0;
+    const columns = styles.gridTemplateColumns.split(' ').map((track) => Number.parseFloat(track)).filter(Number.isFinite);
+    const columnWidth = columns.length >= 12
+      ? columns.slice(0, 12).reduce((sum, current) => sum + current, 0) / 12
+      : (width - columnGap * 11) / 12;
+    const rows = styles.gridTemplateRows.split(' ').map((track) => Number.parseFloat(track)).filter(Number.isFinite);
+    const rowHeight = rows.length ? [...rows].sort((a, b) => a - b)[Math.floor(rows.length / 2)] : 32;
+    resizeStart.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      w: widgetPosition.w,
+      h: widgetPosition.h,
+      columnStep: Math.max(1, columnWidth + columnGap),
+      rowStep: Math.max(1, rowHeight + (Number.parseFloat(styles.rowGap) || 0)),
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+  const resizeWidget = (event: React.PointerEvent<HTMLButtonElement>, widgetId: string) => {
+    const start = resizeStart.current;
+    if (!start || (event.pointerId !== undefined && event.pointerId !== start.pointerId)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const current = tab.layouts?.[size]?.find((item) => item.widgetId === widgetId) ??
+      tab.widgets.find((widget) => widget.id === widgetId)?.position ?? { row: 0, col: 1, w: start.w, h: start.h };
+    const w = Math.max(1, Math.min(13 - current.col, start.w + Math.round((event.clientX - start.x) / start.columnStep)));
+    const h = Math.max(1, Math.min(20, start.h + Math.round((event.clientY - start.y) / start.rowStep)));
+    setPosition(widgetId, size, { row: current.row, col: current.col, w, h });
+  };
+  const endResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (resizeStart.current && (event.pointerId === undefined || event.pointerId === resizeStart.current.pointerId))
+      resizeStart.current = null;
   };
   const removeWidget = () => {
     if (!selected) return;
@@ -186,6 +249,17 @@ export function WorkspaceEditor({
           hideCloseButton
         />
       )}
+      {!preview && Object.keys(definition.dataSources).length === 0 && (
+        <InlineNotification
+          kind="warning"
+          title={t('noDataSourcesTitle', 'No data sources defined yet.')}
+          subtitle={t(
+            'noDataSourcesHint',
+            'Widgets show data from sources you define in the Data Sources section (it comes before Workspace). Define a source there first, then select it on each widget here.',
+          )}
+          hideCloseButton
+        />
+      )}
       <div className={preview ? styles.preview : styles.workspaceStep}>
         {!preview && (
           <div className={styles.palette}>
@@ -263,18 +337,28 @@ export function WorkspaceEditor({
             ))}
           </div>
         )}
-        <div className={styles.canvas} style={{ maxWidth: size === 'narrow' ? '42rem' : undefined }}>
+        <div
+          ref={canvasRef}
+          data-testid="workspace-canvas"
+          className={styles.canvas}
+          style={{ maxWidth: size === 'narrow' ? '42rem' : undefined }}>
           {!tab.widgets.length && <p>{t('canvasEmpty', 'Add components from the palette to build this tab.')}</p>}
           {tab.widgets.map((widget, index) => {
             const pos = tab.layouts?.[size]?.find((item) => item.widgetId === widget.id) ??
               widget.position ?? { col: 1, w: 12, row: index * 2, h: 2 };
             return (
-              <Tile
+              <div
                 key={widget.id}
                 className={`${styles.canvasCard} ${selectedId === widget.id ? styles.canvasCardSelected : ''}`}
                 style={{ gridColumn: `${pos.col} / span ${pos.w}`, gridRow: `${pos.row + 1} / span ${pos.h}` }}
                 draggable={!preview}
-                onDragStart={(e) => e.dataTransfer.setData('text/plain', widget.id)}
+                onDragStart={(e) => {
+                  if ((e.target as HTMLElement).closest(`.${styles.resizeHandle}`)) {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.dataTransfer.setData('text/plain', widget.id);
+                }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -298,7 +382,32 @@ export function WorkspaceEditor({
                   />
                 </div>
                 <WidgetPreview widget={widget} tabId={tab.id} />
-              </Tile>
+                <button
+                  type="button"
+                  className={styles.resizeHandle}
+                  aria-label={t('resizeWidget', 'Resize {{name}}', {
+                    name: String(widget.properties?.title ?? widget.id),
+                  })}
+                  title={t('resizeWidgetHint', 'Drag to resize. Use arrow keys to fine-tune.')}
+                  onPointerDown={(event) => beginResize(event, widget.id, pos)}
+                  onPointerMove={(event) => resizeWidget(event, widget.id)}
+                  onPointerUp={endResize}
+                  onPointerCancel={endResize}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    const key = event.key;
+                    if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'].includes(key)) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const delta = event.shiftKey ? 3 : 1;
+                    if (key === 'ArrowRight') adjustWidgetSize(widget.id, pos, 'w', pos.w + delta);
+                    if (key === 'ArrowLeft') adjustWidgetSize(widget.id, pos, 'w', pos.w - delta);
+                    if (key === 'ArrowDown') adjustWidgetSize(widget.id, pos, 'h', pos.h + delta);
+                    if (key === 'ArrowUp') adjustWidgetSize(widget.id, pos, 'h', pos.h - delta);
+                  }}>
+                  <span className={styles.resizeGrip} aria-hidden="true" />
+                </button>
+              </div>
             );
           })}
         </div>

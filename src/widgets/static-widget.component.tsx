@@ -11,7 +11,7 @@ export function StaticWidget({ widget }: { widget: WidgetInstance }) {
   const text = String(props.text ?? '');
   switch (widget.type) {
     case 'text-note':
-      return <p className={styles.staticText}>{text}</p>;
+      return <p className={`${styles.staticText} ${styles.staticNote}`}>{text}</p>;
     case 'section-heading': {
       const Heading = `h${Number(props.level ?? 2)}` as 'h2';
       return <Heading>{text}</Heading>;

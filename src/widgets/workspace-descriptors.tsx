@@ -8,7 +8,7 @@ export function CarePlanWidget({ widget }: { widget: WidgetInstance }) {
   const { t } = useTranslation();
   const pathway = useContext(WorkspaceDescriptorContext)?.pathway;
   return (
-    <section>
+    <section className={styles.recordCard}>
       <p className={styles.widgetTitle}>{String(widget.properties?.title ?? t('carePlan', 'Care plan'))}</p>
       {pathway?.status === 'recorded' ? (
         <>

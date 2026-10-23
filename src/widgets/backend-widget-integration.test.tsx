@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useWidgetData } from '../api/caremodels.resource';
 import { parseDataResult, parseWorkspace } from '../api/contract';
 import { WidgetRenderer } from './widget-renderer.component';
@@ -8,7 +8,34 @@ import { widgetManifest, sourceCompatibility } from './widget-registry';
 import { parseDefinitionJson } from '../admin/designer/definition-validation';
 import { blankDefinition } from '../admin/designer/definition';
 import { WorkspaceDescriptorContext } from './workspace-descriptors';
+import { getGlobalStore, launchWorkspace2, showModal } from '@openmrs/esm-framework';
 vi.mock('../api/caremodels.resource', async (original) => ({ ...(await original<object>()), useWidgetData: vi.fn() }));
+vi.mock('@openmrs/esm-framework', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getGlobalStore: vi.fn(),
+}));
+
+/** Emulates the patient chart's visit-context store (patient-chart-global-store). */
+function fakeChartStore(initial: Record<string, unknown> = {}) {
+  let state: Record<string, unknown> = {
+    patientUuid: null,
+    visitContext: null,
+    workspaceGroupVisitUuid: null,
+    ...initial,
+  };
+  const listeners = new Set<() => void>();
+  return {
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    getState: () => state,
+    setState(next: Record<string, unknown>) {
+      state = { ...state, ...next };
+      listeners.forEach((listener) => listener());
+    },
+  };
+}
 const context = { patientUuid: 'patient', modelCode: 'model', tabId: 'overview' };
 beforeEach(() =>
   vi.mocked(useWidgetData).mockReturnValue({ data: undefined, error: undefined, isLoading: false } as never),
@@ -111,7 +138,83 @@ it('accepts encounter binding and renders actual encounter events', () => {
     isLoading: false,
   } as never);
   render(<WidgetRenderer widget={{ id: 'events', type: 'timeline', dataSource: 'source' }} {...context} />);
-  expect(screen.getByText('Documented encounter · recorded')).toBeInTheDocument();
+  expect(screen.getByText('Documented encounter')).toBeInTheDocument();
+  expect(screen.getByText('recorded')).toBeInTheDocument();
+});
+it('launches an authorized form in the chart form-entry workspace with the visit context', async () => {
+  vi.mocked(getGlobalStore).mockReturnValue(
+    fakeChartStore({
+      patientUuid: 'patient',
+      visitContext: { uuid: 'visit-9', display: 'Facility Visit @ ART Clinic' },
+      workspaceGroupVisitUuid: 'visit-9',
+    }) as never,
+  );
+  render(
+    <WorkspaceDescriptorContext.Provider
+      value={{
+        version: '1.0.0',
+        forms: [
+          {
+            alias: 'followup',
+            available: true,
+            formUuid: 'form-9',
+            name: 'Followup form',
+            version: '1.2',
+            encounterTypeUuid: 'type-9',
+            encounterTypeName: 'Followup',
+          },
+        ],
+        actions: [],
+      }}>
+      <WidgetRenderer widget={{ id: 'launcher', type: 'form-launcher', formAlias: 'followup' }} {...context} />
+    </WorkspaceDescriptorContext.Provider>,
+  );
+  const open = screen.getByRole('button', { name: 'Open form' });
+  expect(open).toHaveAttribute('title', 'Saves to the current visit: Facility Visit @ ART Clinic');
+  fireEvent.click(open);
+  expect(launchWorkspace2).toHaveBeenCalledWith('patient-form-entry-workspace', {
+    form: {
+      uuid: 'form-9',
+      name: 'Followup form',
+      display: 'Followup form',
+      version: '1.2',
+      published: true,
+      retired: false,
+      resources: [],
+      encounterType: { uuid: 'type-9', name: 'Followup' },
+    },
+  });
+});
+it('offers the start-visit dialog and launches only after the visit context exists', async () => {
+  const store = fakeChartStore({ patientUuid: 'patient' });
+  vi.mocked(getGlobalStore).mockReturnValue(store as never);
+  render(
+    <WorkspaceDescriptorContext.Provider
+      value={{
+        version: '1.0.0',
+        forms: [{ alias: 'followup', available: true, formUuid: 'form-9', name: 'Followup form' }],
+        actions: [],
+      }}>
+      <WidgetRenderer widget={{ id: 'launcher', type: 'form-launcher', formAlias: 'followup' }} {...context} />
+    </WorkspaceDescriptorContext.Provider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Open form' }));
+  expect(launchWorkspace2).not.toHaveBeenCalled();
+  expect(showModal).toHaveBeenCalledWith(
+    'start-visit-dialog',
+    expect.objectContaining({ patientUuid: 'patient' }),
+  );
+  // The chart starts the visit and relaunches its workspace group; the launcher must wait for it.
+  const onVisitStarted = vi.mocked(showModal).mock.calls[0][1].onVisitStarted as () => void;
+  onVisitStarted();
+  store.setState({
+    patientUuid: 'patient',
+    visitContext: { uuid: 'visit-10', display: 'Facility Visit' },
+    workspaceGroupVisitUuid: 'visit-10',
+  });
+  await waitFor(() => expect(launchWorkspace2).toHaveBeenCalledWith('patient-form-entry-workspace', {
+    form: expect.objectContaining({ uuid: 'form-9' }),
+  }));
 });
 it('shows recorded pathway metadata without inferring completion', () => {
   render(

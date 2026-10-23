@@ -56,7 +56,7 @@ export interface TabSummary {
 
 export interface WorkspaceDescriptors {
   version: string;
-  forms: Array<{ alias: string; available: boolean; reason?: string; formUuid?: string; name?: string }>;
+  forms: Array<{ alias: string; available: boolean; reason?: string; formUuid?: string; name?: string; encounterTypeUuid?: string; version?: string }>;
   actions: Array<{ id: string; available: boolean; reason?: string; label?: string; type?: string }>;
   pathway?: { status: string; stage?: string; label?: string; enteredAt?: string };
 }

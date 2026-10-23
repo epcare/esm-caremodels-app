@@ -1,5 +1,6 @@
 import { RecordSourceBuilder, RecordSourceSettings } from './record-source-builder.component';
 import React, { useState } from 'react';
+import useSWR from 'swr';
 import {
   Button,
   FilterableMultiSelect,
@@ -8,13 +9,19 @@ import {
   Select,
   SelectItem,
   Stack,
+  Tag,
   TextInput,
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import type { OpenmrsChoice, OpenmrsConcept } from '../../api/caremodels.resource';
+import {
+  fetchConceptDetails,
+  type OpenmrsChoice,
+  type OpenmrsConcept,
+} from '../../api/caremodels.resource';
 import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
 import { ConceptSelector } from '../concept-selector.component';
 import { sourceCompatibility } from '../../widgets/widget-registry';
+import styles from './designer.scss';
 
 export const validSourceAlias = (value: string) => /^[a-z][a-zA-Z0-9._-]{0,99}$/.test(value);
 export function conceptResultType(concept?: OpenmrsConcept): DataSourceDefinition['resultType'] | undefined {
@@ -159,6 +166,24 @@ export function DataSourceBuilder({
               )}
             </>
           )}
+          <div>
+            <p className={styles.inlineFieldLabel}>{t('resultType', 'Result type')}</p>
+            {resultType ? (
+              <Tag type="blue" size="sm">
+                {resultType}
+              </Tag>
+            ) : (
+              <Tag type="gray" size="sm">
+                {t('resultTypePending', 'Select a supported concept')}
+              </Tag>
+            )}
+            <p className={styles.sectionHint}>
+              {t(
+                'resultTypeDerivedHint',
+                'Derived from the concept datatype; the registered observation resolver does not allow overriding it.',
+              )}
+            </p>
+          </div>
           <Select
             id="observation-strategy"
             labelText={t('selectionStrategy', 'Selection strategy')}
@@ -240,7 +265,8 @@ export function DataSourceBuilder({
   );
 }
 
-/** Shared editor for existing observation source declarations, including widget inspector usage. */
+/** Shared editor for existing observation source declarations, including widget inspector usage.
+ * Mirrors the create form's field set and order; only key and concept picker are absent. */
 export function SourceSettings({
   sourceKey,
   definition,
@@ -271,6 +297,41 @@ export function SourceSettings({
         )}
       />
     );
+  return (
+    <ObservationSourceSettings
+      sourceKey={sourceKey}
+      definition={definition}
+      onChange={onChange}
+      error={error}
+      setError={setError}
+    />
+  );
+}
+
+function ObservationSourceSettings({
+  sourceKey,
+  definition,
+  onChange,
+  error,
+  setError,
+}: {
+  sourceKey: string;
+  definition: ModelDefinition;
+  onChange: (value: ModelDefinition) => void;
+  error: string | null;
+  setError: (message: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const source = definition.dataSources[sourceKey];
+  const conceptUuid = source.conceptAlias ? definition.terminology.concepts?.[source.conceptAlias] : undefined;
+  const { data: concept } = useSWR(
+    conceptUuid ? ['caremodels-concept-detail', conceptUuid] : null,
+    ([, uuid]: [string, string]) => fetchConceptDetails(uuid),
+    { shouldRetryOnError: false },
+  );
+  // Result type follows the concept datatype, exactly as at creation time.
+  const derivedType = conceptResultType(concept);
+  const history = source.type === 'historical-observations';
   const update = (patch: Partial<DataSourceDefinition>) => {
     const next = { ...source, ...patch };
     const boundWidgets = definition.workspace.tabs
@@ -324,33 +385,45 @@ export function SourceSettings({
           <SelectItem key={alias} value={alias} text={`${alias} — ${definition.terminology.concepts![alias]}`} />
         ))}
       </Select>
+      <div>
+        <p className={styles.inlineFieldLabel}>{t('resultType', 'Result type')}</p>
+        <Tag type="blue" size="sm">
+          {derivedType ?? source.resultType}
+        </Tag>
+        <p className={styles.sectionHint}>
+          {t(
+            'resultTypeDerivedHint',
+            'Derived from the concept datatype; the registered observation resolver does not allow overriding it.',
+          )}
+        </p>
+      </div>
       <Select
-        id={`source-result-${sourceKey}`}
-        labelText={t('resultType', 'Result type')}
-        value={source.resultType}
-        onChange={(event) => update({ resultType: event.target.value as DataSourceDefinition['resultType'] })}>
-        {['NUMBER', 'CODED', 'STRING', 'DATE'].map((type) => (
-          <SelectItem key={type} value={type} text={type} />
-        ))}
+        id={`source-strategy-${sourceKey}`}
+        labelText={t('selectionStrategy', 'Selection strategy')}
+        value={history ? 'history' : 'latest'}
+        onChange={(event) => {
+          const nextHistory = event.target.value === 'history';
+          update({
+            type: nextHistory ? 'historical-observations' : 'latest-observation',
+            maxResults: nextHistory ? Math.max(2, source.maxResults ?? 50) : 1,
+          });
+        }}>
+        <SelectItem value="latest" text={t('latestValue', 'Latest value')} />
+        <SelectItem value="history" text={t('recentObservations', 'Recent observations (bounded history)')} />
       </Select>
-      <TextInput
-        id={`source-units-${sourceKey}`}
-        labelText={t('units', 'Units')}
-        maxLength={20}
-        value={source.units ?? ''}
-        onChange={(event) => update({ units: event.target.value })}
-      />
-      <NumberInput
-        id={`source-limit-${sourceKey}`}
-        label={t('maxResults', 'Maximum results')}
-        min={1}
-        max={1000}
-        value={source.maxResults ?? 1}
-        onChange={(_, { value }) => {
-          const n = Number(value);
-          if (Number.isInteger(n) && n >= 1 && n <= 1000) update({ maxResults: n });
-        }}
-      />
+      {history && (
+        <NumberInput
+          id={`source-limit-${sourceKey}`}
+          label={t('maxResults', 'Maximum results')}
+          min={2}
+          max={1000}
+          value={source.maxResults ?? 50}
+          onChange={(_, { value }) => {
+            const n = Number(value);
+            if (Number.isInteger(n) && n >= 2 && n <= 1000) update({ maxResults: n });
+          }}
+        />
+      )}
       <NumberInput
         id={`source-window-${sourceKey}`}
         label={t('windowDays', 'Window (days)')}
@@ -361,6 +434,13 @@ export function SourceSettings({
           const n = Number(value);
           if (Number.isInteger(n) && n >= 1 && n <= 3650) update({ windowDays: n });
         }}
+      />
+      <TextInput
+        id={`source-units-${sourceKey}`}
+        labelText={t('units', 'Units')}
+        maxLength={20}
+        value={source.units ?? ''}
+        onChange={(event) => update({ units: event.target.value })}
       />
     </Stack>
   );

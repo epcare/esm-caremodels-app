@@ -52,15 +52,23 @@ export function TimelineWidget({
           {records.map((record) => (
             <li key={record.uuid} className={styles.trendPoint}>
               <span className={styles.trendTime}>{formatClinicalDate(String(record.effectiveTime ?? ''))}</span>
-              <span className={styles.trendValue}>
-                {String(record.encounterTypeName ?? '')} · {String(record.status ?? '')}
+              <span className={styles.trendDetail}>
+                <span className={styles.trendValue}>
+                  {String(record.encounterTypeName ?? t('clinicalEncounter', 'Clinical encounter'))}
+                </span>
+                {Boolean(record.status) && <span className={styles.trendContext}>{String(record.status)}</span>}
               </span>
             </li>
           ))}
           {values.map((value) => (
             <li key={value.obsUuid ?? value.effectiveTime} className={styles.trendPoint}>
               <span className={styles.trendTime}>{formatClinicalDate(value.effectiveTime)}</span>
-              <span className={styles.trendValue}>{formatClinicalValue(value)}</span>
+              <span className={styles.trendDetail}>
+                <span className={styles.trendValue}>
+                  {String(value.valueName ?? t('clinicalResult', 'Clinical result'))}
+                </span>
+                <span className={styles.trendContext}>{formatClinicalValue(value)}</span>
+              </span>
             </li>
           ))}
         </ol>

@@ -3,15 +3,44 @@
 
 .widgetTitle {
   @include type.type-style('heading-compact-01');
-  margin-block-end: layout.$spacing-03;
+  color: var(--cds-text-primary);
+  margin: 0 0 layout.$spacing-04;
 }
+/* Widget frames stay white against the grey patient-chart background (shared styling guide). */
 .metricTile {
   min-block-size: layout.$spacing-12;
+  block-size: 100%;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  background: #ffffff;
+  padding: layout.$spacing-05;
+  box-shadow: none;
 }
+.metricBody { display: flex; align-items: center; gap: layout.$spacing-04; min-inline-size: 0; }
+.metricIcon { flex: 0 0 auto; inline-size: 2rem; block-size: 2rem; color: var(--cds-link-primary); }
+.metricDetail { min-inline-size: 0; }
 .metricValue {
-  @include type.type-style('heading-05');
-  margin-block: layout.$spacing-04;
+  @include type.type-style('heading-03');
+  color: var(--cds-text-primary);
+  font-weight: 600;
+  margin: 0 0 layout.$spacing-02;
 }
+.statusDot {
+  flex: 0 0 auto;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border-radius: 50%;
+  background: var(--cds-icon-secondary);
+}
+.statusDotblue { background: var(--cds-support-info); }
+.statusDotgreen { background: var(--cds-support-success); }
+.statusDotred { background: var(--cds-support-error); }
+.statusDotteal { background: var(--cds-link-primary); }
+.statusDotpurple { background: var(--cds-link-primary); }
+.statusDotgray,
+.statusDotwarm-gray { background: var(--cds-icon-secondary); }
+.metricHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: layout.$spacing-03; }
+.metricHeader .widgetTitle { min-inline-size: 0; }
 .missingData {
   @include type.type-style('body-compact-01');
   color: var(--cds-text-secondary);
@@ -20,34 +49,85 @@
 .trendChart,
 .timeline,
 .formLauncher,
-.actionPanel {
-  margin-block-end: layout.$spacing-05;
+.actionPanel,
+.recordCard {
+  box-sizing: border-box;
+  block-size: 100%;
+  min-inline-size: 0;
+  padding: layout.$spacing-05;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: none;
 }
+.tableWrapper :global(.cds--data-table-container),
+.tableWrapper :global(.cds--data-table-content) { max-inline-size: 100%; }
+.tableWrapper :global(.cds--data-table th),
+.tableWrapper :global(.cds--data-table td) { padding-inline: layout.$spacing-03; }
+.tableWrapper :global(.cds--pagination) { min-block-size: 2.5rem; }
+.tableWrapper > :global(.cds--data-table-container) { margin-block-start: layout.$spacing-03; }
 .trendList {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .trendPoint {
-  display: flex;
-  justify-content: space-between;
-  gap: layout.$spacing-05;
-  padding-block: layout.$spacing-02;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+  align-items: start;
+  gap: layout.$spacing-04;
+  padding: layout.$spacing-03 layout.$spacing-02 layout.$spacing-03 layout.$spacing-05;
   border-block-end: 1px solid var(--cds-border-subtle);
 }
+.trendPoint::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 1rem;
+  inline-size: .55rem;
+  block-size: .55rem;
+  border-radius: 50%;
+  background: var(--cds-link-primary);
+  box-shadow: 0 0 0 2px #ffffff;
+  z-index: 1;
+}
+.trendPoint:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: .24rem;
+  inset-block: 1.5rem -.25rem;
+  inline-size: 1px;
+  background: var(--cds-border-strong);
+}
 .trendTime {
+  @include type.type-style('body-compact-01');
   color: var(--cds-text-secondary);
 }
 .trendValue {
-  font-weight: 500;
+  @include type.type-style('heading-compact-01');
+  color: var(--cds-text-primary);
+}
+.trendDetail { min-inline-size: 0; }
+.trendContext {
+  display: block;
+  @include type.type-style('body-compact-01');
+  color: var(--cds-text-secondary);
+  margin-block-start: layout.$spacing-02;
 }
 .chart {
   inline-size: 100%;
-  min-block-size: 12rem;
+  block-size: 12rem;
+  min-block-size: 10rem;
   color: var(--cds-text-secondary);
 }
 .widgetSubtitle,
 .measurementDate {
+  @include type.type-style('body-compact-01');
+  color: var(--cds-text-secondary);
+  margin: 0 0 layout.$spacing-03;
+}
+.dataState {
   @include type.type-style('body-compact-01');
   color: var(--cds-text-secondary);
   margin-block: layout.$spacing-03;
@@ -60,6 +140,16 @@
 .staticText {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.staticNote {
+  box-sizing: border-box;
+  min-block-size: 3rem;
+  padding: layout.$spacing-04;
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--cds-text-primary);
+  @include type.type-style('body-compact-01');
 }
 .divider {
   border-top: 1px solid var(--cds-border-subtle);
@@ -80,6 +170,79 @@
   height: layout.$spacing-07;
 }
 .recordItem {
-  padding-block: layout.$spacing-04;
-  border-bottom: 1px solid var(--cds-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-02;
+  padding: layout.$spacing-03 0;
+  border-block-end: 1px solid var(--cds-border-subtle);
+}
+.recordMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: layout.$spacing-03;
+  min-inline-size: 0;
+}
+.recordName {
+  @include type.type-style('heading-compact-01');
+  color: var(--cds-text-primary);
+  min-inline-size: 0;
+}
+.recordMeta {
+  @include type.type-style('body-compact-01');
+  color: var(--cds-text-secondary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.recordItem :global(.cds--tag) { margin: 0; flex: 0 0 auto; }
+.recordFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: layout.$spacing-02 layout.$spacing-04;
+  margin: 0;
+}
+.recordFields dt { @include type.type-style('label-01'); color: var(--cds-text-secondary); }
+.recordFields dd { @include type.type-style('body-compact-01'); margin: 0; overflow-wrap: anywhere; }
+.formRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: layout.$spacing-03;
+  padding-block: layout.$spacing-03;
+  border-block-end: 1px solid var(--cds-border-subtle);
+}
+.formRow :global(.cds--btn) { min-block-size: 2rem; padding-inline: layout.$spacing-04; }
+.formIcon { color: var(--cds-link-primary); inline-size: 1.25rem; block-size: 1.25rem; }
+.formName { @include type.type-style('body-compact-01'); min-inline-size: 0; }
+.formReason { @include type.type-style('label-01'); color: var(--cds-text-secondary); grid-column: 2 / -1; }
+.actionList { display: flex; flex-direction: column; gap: layout.$spacing-02; }
+.actionList :global(.cds--btn) { inline-size: 100%; justify-content: flex-start; min-block-size: 2rem; }
+.chartHeader { display: flex; justify-content: space-between; align-items: center; gap: layout.$spacing-03; }
+.chartHeader .widgetTitle { margin-block-end: layout.$spacing-02; }
+.chartUnit { @include type.type-style('label-01'); color: var(--cds-text-secondary); font-weight: 400; }
+.viewAllLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: layout.$spacing-02;
+  @include type.type-style('body-compact-01');
+  color: var(--cds-link-primary);
+  white-space: nowrap;
+}
+.recordList { list-style: none; padding: 0; margin: 0; }
+.recordList .recordItem:last-child { border-block-end: 0; }
+
+@media (max-width: 40rem) {
+  .metricTile,
+  .tableWrapper,
+  .trendChart,
+  .timeline,
+  .formLauncher,
+  .actionPanel,
+  .recordCard { padding: layout.$spacing-04; }
+  .trendPoint { grid-template-columns: 1fr; gap: layout.$spacing-02; }
+  .recordFields { grid-template-columns: 1fr; }
+  .formRow { grid-template-columns: auto minmax(0, 1fr); }
+  .formRow :global(.cds--btn) { grid-column: 2; justify-self: start; }
+  .formReason { grid-column: 2; }
 }

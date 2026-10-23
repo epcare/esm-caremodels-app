@@ -353,6 +353,7 @@
   overflow: auto;
 }
 .canvasCard {
+  position: relative;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -419,11 +420,56 @@
 }
 .canvasCard {
   cursor: default;
-  border-style: dashed;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 .canvasCardSelected {
   outline: 2px solid var(--cds-border-focus);
   outline-offset: 2px;
+}
+.canvasControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: layout.$spacing-02;
+  min-block-size: 1.75rem;
+  margin-block-end: layout.$spacing-02;
+  padding-inline: layout.$spacing-02;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.previewContent { min-inline-size: 0; }
+.previewBadge { margin-block-end: layout.$spacing-02; }
+.previewContent :global(.cds--tile) { block-size: 100%; }
+.resizeHandle {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: 0.25rem;
+  inset-inline-end: 0.25rem;
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--cds-border-subtle);
+  background: var(--cds-layer);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.resizeHandle:focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: 2px;
+}
+.resizeGrip {
+  inline-size: 0.65rem;
+  block-size: 0.65rem;
+  background: repeating-linear-gradient(135deg, transparent 0 2px, var(--cds-icon-secondary) 2px 3px);
 }
 .palette section > h5 {
   @include type.type-style('heading-compact-01');
@@ -438,4 +484,85 @@
 }
 .inspector :global(.cds--tabs__nav-link) {
   padding-inline: layout.$spacing-03;
+}
+
+.sourcesManager {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.sourcesToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-block-end: 0.5rem;
+}
+
+.sourcesInspector {
+  border: 1px solid var(--cds-border-subtle);
+  background: var(--cds-layer);
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.sourceUuidCell {
+  display: block;
+  color: var(--cds-text-secondary);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.sourcesEmpty {
+  margin-block-start: 0.5rem;
+  color: var(--cds-text-secondary);
+}
+
+.sourceDetailGrid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.375rem 1rem;
+  margin: 0;
+}
+
+.sourceDetailGrid dt {
+  color: var(--cds-text-secondary);
+}
+
+.sourceDetailGrid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.usageList {
+  margin: 0;
+  padding-inline-start: 1rem;
+}
+
+@media (max-width: 66rem) {
+  .sourcesManager {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sourceKeyButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--cds-link-primary);
+  cursor: pointer;
+  text-align: start;
+}
+
+.sourceKeyButton:hover {
+  text-decoration: underline;
+}
+
+.inlineFieldLabel {
+  @include type.type-style('label-01');
+  color: var(--cds-text-secondary);
+  margin: 0 0 0.25rem;
 }

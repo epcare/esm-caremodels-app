@@ -1,10 +1,15 @@
 import update from '../../configuration/hiv/hiv-workspace-update.json';
+import correctedUpdate from '../../configuration/hiv/hiv-care-simplified-corrected-workspace-update.json';
 import { parseDefinitionJson } from '../admin/designer/definition-validation';
 import { widgetBindingErrors, widgetManifest } from '../widgets/widget-registry';
 import { mergeWorkspaceUpdate } from './merge-workspace-update.mjs';
 import type { ModelDefinition } from '../types/caremodels';
 
-const candidate = update as ModelDefinition;
+const candidate = correctedUpdate as ModelDefinition;
+it('keeps the corrected supplied-draft artifact aligned with the reviewed HIV workspace update', () => {
+  expect(correctedUpdate).toEqual(update);
+  expect(candidate.enrollment).toEqual({ enabled: false, triggers: [], rules: [] });
+});
 it('ships a designer-compatible eight-tab configuration with registered widgets and bounded responsive layouts', () => {
   expect(parseDefinitionJson(JSON.stringify(candidate)).errors).toEqual([]);
   expect(widgetBindingErrors(candidate)).toEqual([]);

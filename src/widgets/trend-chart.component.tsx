@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { InlineNotification, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react';
+import { ArrowRight } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { useWidgetData } from '../api/caremodels.resource';
 import type { DataResult, WidgetInstance } from '../types/caremodels';
@@ -65,9 +66,22 @@ function TrendChartView({
   const points = useMemo(() => chartPoints(data, logarithmic), [data, logarithmic]);
   const excluded = (data?.values?.length ?? 0) - points.length;
   const title = String(widget.properties?.title ?? widget.id);
+  const unit = String(widget.properties?.unit ?? '');
+  const viewAllLabel = String(widget.properties?.viewAllLabel ?? '');
   return (
     <div className={styles.trendChart}>
-      <h4 className={styles.widgetTitle}>{title}</h4>
+      <div className={styles.chartHeader}>
+        <h4 className={styles.widgetTitle}>
+          {title}
+          {unit && <span className={styles.chartUnit}> ({unit})</span>}
+        </h4>
+        {viewAllLabel && (
+          <span className={styles.viewAllLink}>
+            {viewAllLabel}
+            <ArrowRight size={16} aria-hidden="true" />
+          </span>
+        )}
+      </div>
       {Boolean(widget.properties?.subtitle) && (
         <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
       )}
@@ -254,7 +268,7 @@ function CarbonTrendChart({
             value: point.value,
           })),
           options: {
-            height: '280px',
+            height: '190px',
             animations: false,
             axes: {
               bottom: { mapsTo: 'date', scaleType: ScaleTypes.TIME },

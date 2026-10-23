@@ -6,6 +6,7 @@ import { WorkspaceDescriptorContext } from '../../widgets/workspace-descriptors'
 import { WidgetRenderer } from '../../widgets/widget-renderer.component';
 import { manifestFor } from '../../widgets/widget-registry';
 import type { WidgetInstance } from '../../types/caremodels';
+import styles from './designer.scss';
 
 /** Designer-only scope. Even bound widgets cannot execute a clinical fetcher. */
 export function WidgetPreview({ widget, tabId }: { widget: WidgetInstance; tabId: string }) {
@@ -23,18 +24,20 @@ export function WidgetPreview({ widget, tabId }: { widget: WidgetInstance; tabId
       : widget;
   return (
     <SWRConfig value={config}>
-      <Tag size="sm" type="cool-gray">
-        {t('previewData', 'Preview data')}
-      </Tag>
-      <WorkspaceDescriptorContext.Provider
-        value={{
-          version: '1.0.0',
-          forms: [],
-          actions: [],
-          pathway: { status: 'recorded', label: 'Example stage', stage: 'example', enteredAt: '2026-01-01' },
-        }}>
-        <WidgetRenderer widget={shown} patientUuid="" modelCode="" tabId={tabId} />
-      </WorkspaceDescriptorContext.Provider>
+      <div className={styles.previewContent}>
+        <Tag className={styles.previewBadge} size="sm" type="cool-gray">
+          {t('previewData', 'Preview data')}
+        </Tag>
+        <WorkspaceDescriptorContext.Provider
+          value={{
+            version: '1.0.0',
+            forms: [],
+            actions: [],
+            pathway: { status: 'recorded', label: 'Example stage', stage: 'example', enteredAt: '2026-01-01' },
+          }}>
+          <WidgetRenderer widget={shown} patientUuid="" modelCode="" tabId={tabId} />
+        </WorkspaceDescriptorContext.Provider>
+      </div>
     </SWRConfig>
   );
 }

@@ -69,9 +69,8 @@ export default function CareModelsPatientSummary({ patientUuid: providedUuid }: 
   }
 
   return (
-    <div className={styles.container}>
-      <p className={styles.heading}>{t('careModels', 'Care Models')}</p>
-      <p className={styles.subtitle}>{t('careModelsSubtitle', 'Care models this patient is enrolled in')}</p>
+    // The model cards and workspace speak for themselves; no visible heading when models load.
+    <div className={styles.container} aria-label={t('careModels', 'Care Models')}>
       <SWRConfig key={`${session?.user?.uuid}:${patientUuid}`} value={{ provider: () => new Map() }}>
         <CareModelsBoard patientUuid={patientUuid} />
       </SWRConfig>

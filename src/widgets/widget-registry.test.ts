@@ -10,6 +10,10 @@ it('registers supported widgets with dimensions, properties and preview fixtures
   expect(manifestFor({ id: 'status', type: 'metric', properties: { presentation: 'status' } })?.id).toBe(
     'clinical-status',
   );
+  expect(manifestFor({ id: 'kv', type: 'metric', properties: { presentation: 'key-value' } })?.id).toBe(
+    'key-value-metric',
+  );
+  expect(manifestFor({ id: 'date', type: 'metric', properties: { presentation: 'date' } })?.id).toBe('date-metric');
 });
 it('enforces result shapes and bounded numeric history without composite sources', () => {
   const source = {
@@ -41,9 +45,10 @@ it('allows a one-record collection source for tables while preserving chart hist
   expect(sourceCompatibility({ id: 'table', type: 'clinical-table' }, source)).toBeNull();
   expect(sourceCompatibility({ id: 'chart', type: 'trend-chart' }, source)).not.toBeNull();
 });
-it('represents all 25 catalog entries across enabled and blocked palette entries', async () => {
+it('represents all catalog entries across enabled and blocked palette entries', async () => {
   const { unavailableWidgets } = await import('./widget-registry');
-  expect(widgetManifest.length + unavailableWidgets.length).toBe(25);
+  // 25 briefs plus the Key Value Pair and Date Metric metric-presentation profiles.
+  expect(widgetManifest.length + unavailableWidgets.length).toBe(27);
 });
 it('rebinds an observation table to typed fields without retaining incompatible columns or units', async () => {
   const { bindWidgetSource } = await import('./widget-registry');

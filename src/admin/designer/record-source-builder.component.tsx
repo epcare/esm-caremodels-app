@@ -141,7 +141,7 @@ export function RecordSourceBuilder({
         <>
           <NumberInput
             id="record-source-limit"
-            label={t('maximumResults', 'Maximum results')}
+            label={t('maxResults', 'Maximum results')}
             min={1}
             max={1000}
             value={limit}
@@ -149,7 +149,7 @@ export function RecordSourceBuilder({
           />
           <NumberInput
             id="record-source-window"
-            label={t('windowDays', 'Date window (days)')}
+            label={t('windowDays', 'Window (days)')}
             min={1}
             max={3650}
             value={days}
@@ -262,7 +262,7 @@ export function RecordSourceSettings({
         <>
           <NumberInput
             id={`limit-${sourceKey}`}
-            label={t('maximumResults', 'Maximum results')}
+            label={t('maxResults', 'Maximum results')}
             min={1}
             max={1000}
             value={source.maxResults ?? 100}
@@ -273,7 +273,7 @@ export function RecordSourceSettings({
           />
           <NumberInput
             id={`window-${sourceKey}`}
-            label={t('windowDays', 'Date window (days)')}
+            label={t('windowDays', 'Window (days)')}
             min={1}
             max={3650}
             value={source.windowDays ?? 365}

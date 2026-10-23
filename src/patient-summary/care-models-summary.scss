@@ -1,4 +1,5 @@
 .container {
+  position: relative;
   padding: 0.5rem 0;
 }
 
@@ -10,6 +11,14 @@
 .subtitle {
   color: var(--cds-text-secondary);
   margin-bottom: 0.75rem;
+}
+
+/* The refresh control is a small corner detail, not a toolbar row. */
+.enrollmentToolbar {
+  position: absolute;
+  top: 0.25rem;
+  inset-inline-end: 0.25rem;
+  z-index: 1;
 }
 
 .emptyState {
@@ -34,7 +43,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.875rem 1rem;
-  background: var(--cds-layer);
+  /* White against the grey patient-chart background, matching the widget frames. */
+  background: #ffffff;
   border: 1px solid var(--cds-border-subtle);
   border-radius: 8px;
   cursor: pointer;

@@ -57,8 +57,8 @@ import styles from './designer.scss';
 const sectionLabels = [
   'General',
   'Enrollment Rules',
-  'Workspace',
   'Data Sources',
+  'Workspace',
   'Forms',
   'Actions',
   'Care Pathway',
@@ -67,8 +67,8 @@ const sectionLabels = [
 const sectionDescriptions = [
   'Basic model information',
   'Define patient eligibility',
+  'Configure clinical data sources widgets can bind to',
   'Design patient workspace',
-  'Configure clinical data',
   'Add and configure forms',
   'Patient and system actions',
   'Configure the care pathway',
@@ -77,8 +77,8 @@ const sectionDescriptions = [
 const steps = [
   'general',
   'enrollmentRules',
-  'workspace',
   'dataSources',
+  'workspace',
   'forms',
   'actions',
   'carePathway',

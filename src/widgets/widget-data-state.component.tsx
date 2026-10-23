@@ -4,6 +4,7 @@ import { Renew } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { isAuthorizationError } from '../api/contract';
 import type { DataResult } from '../types/caremodels';
+import styles from './widgets.scss';
 
 export function WidgetDataState({
   error,
@@ -22,6 +23,7 @@ export function WidgetDataState({
   if (error)
     return (
       <InlineNotification
+        className={styles.dataState}
         kind={isAuthorizationError(error) ? 'warning' : 'error'}
         lowContrast
         hideCloseButton
@@ -37,7 +39,7 @@ export function WidgetDataState({
         )}
       </InlineNotification>
     );
-  if (isLoading) return <SkeletonText aria-label={t('loading', 'Loading…')} />;
-  if (!data?.values?.length) return <p>{emptyMessage}</p>;
+  if (isLoading) return <SkeletonText className={styles.dataState} aria-label={t('loading', 'Loading…')} />;
+  if (!data?.values?.length) return <p className={styles.dataState}>{emptyMessage}</p>;
   return null;
 }

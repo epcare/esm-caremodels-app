@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tile, Tag } from '@carbon/react';
+import { Calendar, Document } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { useWidgetData } from '../api/caremodels.resource';
 import type { DataResult, WidgetInstance } from '../types/caremodels';
@@ -7,6 +8,9 @@ import { WidgetDataState } from './widget-data-state.component';
 import { formatClinicalValue, formatClinicalDate } from './clinical-format';
 import type { StatusMapping } from './widget-properties';
 import styles from './widgets.scss';
+
+/** Presentation profiles of the shared metric contract: value, status, date and key-value. */
+type MetricPresentation = 'value' | 'status' | 'date' | 'key-value';
 
 /**
  * Metric tile: latest single value from the widget's data source. Loads only when visible
@@ -26,14 +30,40 @@ export function MetricWidget({
   const { t } = useTranslation();
   const title = (widget.properties?.title as string) ?? widget.id;
   const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
+  const latest = data?.values?.[0];
+  const presentation = widget.properties?.presentation as MetricPresentation | undefined;
+  const statusMapping = (widget.properties?.statusMappings as Array<StatusMapping> | undefined)?.find(
+    (item) => item.value === String(latest?.value),
+  );
 
   return (
     <Tile className={styles.metricTile}>
-      <p className={styles.widgetTitle}>{title}</p>
+      <div className={styles.metricHeader}>
+        <p className={styles.widgetTitle}>{title}</p>
+        {widget.properties?.showStatus === true && statusMapping && presentation !== 'status' && (
+          <Tag type={statusMapping.tone} size="sm">
+            {statusMapping.label}
+          </Tag>
+        )}
+      </div>
       {Boolean(widget.properties?.subtitle) && (
         <p className={styles.widgetSubtitle}>{String(widget.properties?.subtitle)}</p>
       )}
-      <MetricValue widget={widget} data={data} error={error} isLoading={isLoading} onRetry={retry} />
+      <div className={styles.metricBody}>
+        {presentation === 'status' ? (
+          <span
+            aria-hidden="true"
+            className={`${styles.statusDot} ${styles[`statusDot${statusMapping?.tone ?? 'gray'}`]}`}
+          />
+        ) : presentation === 'date' ? (
+          <Calendar className={styles.metricIcon} aria-hidden="true" />
+        ) : presentation === 'key-value' ? null : (
+          <Document className={styles.metricIcon} aria-hidden="true" />
+        )}
+        <div className={styles.metricDetail}>
+          <MetricValue widget={widget} data={data} error={error} isLoading={isLoading} onRetry={retry} />
+        </div>
+      </div>
     </Tile>
   );
 }
@@ -86,15 +116,12 @@ function MetricValue({
   return (
     <>
       {properties.presentation === 'status' ? (
-        <Tag type={mapping?.tone ?? 'blue'}>{mapping?.label ?? value}</Tag>
+        <p className={styles.metricValue}>{mapping?.label ?? value}</p>
       ) : (
         <p className={styles.metricValue}>
           {value}
           {Boolean(properties.unit) && <span className={styles.metricUnit}> {String(properties.unit)}</span>}
         </p>
-      )}
-      {properties.showStatus === true && mapping && properties.presentation !== 'status' && (
-        <Tag type={mapping.tone}>{mapping.label}</Tag>
       )}
       {properties.showStatus === true &&
         !mapping &&
@@ -107,9 +134,7 @@ function MetricValue({
           </p>
         )}
       {properties.showDate !== false && latest.effectiveTime && (
-        <p className={styles.measurementDate}>
-          {t('recordedAt', 'Recorded {{date}}', { date: formatClinicalDate(latest.effectiveTime) })}
-        </p>
+        <p className={styles.measurementDate}>{formatClinicalDate(latest.effectiveTime)}</p>
       )}
       {Boolean(properties.description) && <p className={styles.widgetSubtitle}>{String(properties.description)}</p>}
     </>

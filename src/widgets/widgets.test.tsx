@@ -98,7 +98,7 @@ it('plots only dated numeric observations and destroys charts when a widget unmo
   expect(charts.destroy).toHaveBeenCalledTimes(1);
 });
 
-it('renders shared metric units, precision, neutral reference and observation date from real result fields', () => {
+it('renders shared metric units, precision, neutral reference and compact observation date from real result fields', () => {
   vi.mocked(useWidgetData).mockReturnValue({
     data: {
       type: 'latest-observation',
@@ -121,7 +121,7 @@ it('renders shared metric units, precision, neutral reference and observation da
   expect(screen.getByText('%')).toBeInTheDocument();
   expect(screen.getByText('Configured reference: — – 6')).toBeInTheDocument();
   expect(screen.queryByText('Outside target')).not.toBeInTheDocument();
-  expect(screen.getByText(`Recorded ${new Date('2026-02-01T00:00:00').toLocaleDateString()}`)).toBeInTheDocument();
+  expect(screen.getByText(new Date('2026-02-01T00:00:00').toLocaleDateString())).toBeInTheDocument();
 });
 it('renders clinical status using the metric contract and actual coded label', () => {
   vi.mocked(useWidgetData).mockReturnValue({

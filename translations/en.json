@@ -535,6 +535,8 @@
   "capabilityReason.encounter-create-not-authorized": "You do not have permission to create encounters.",
   "capabilityReason.form-engine-resource-unavailable": "This form has no supported engine resource.",
   "capabilityReason.frontend-form-engine-not-verified": "The installed form engine has not been verified for this launcher.",
+  "formLaunchVisitHint": "Saves to the current visit: {{visit}}",
+  "visitContextRequired": "No active visit. You will be asked to start one first.",
   "capabilityReason.registered-order-workspace-required": "An authorized order-entry workspace must be registered.",
   "capabilityReason.appointments-module-unavailable": "The appointments module is unavailable.",
   "capabilityReason.registered-appointment-workspace-required": "An authorized appointments workspace must be registered.",

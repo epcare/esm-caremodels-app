@@ -96,7 +96,16 @@ export function WidgetInspector({
                     ),
                     ...next.properties,
                     ...(next.type === 'metric'
-                      ? { presentation: next.id === 'clinical-status' ? 'status' : 'value' }
+                      ? {
+                          presentation:
+                            next.id === 'clinical-status'
+                              ? 'status'
+                              : next.id === 'key-value-metric'
+                                ? 'key-value'
+                                : next.id === 'date-metric'
+                                  ? 'date'
+                                  : 'value',
+                        }
                       : {}),
                   },
                 };
@@ -258,6 +267,12 @@ export function WidgetInspector({
           <Stack gap={5}>
             {manifest?.data ? (
               <>
+                <p>
+                  {t(
+                    'dataSourceListHint',
+                    'Sources listed here are declared by this model definition. Add or edit them in the Data Sources section.',
+                  )}
+                </p>
                 <Select
                   id="inspector-source"
                   labelText={t('dataSource', 'Data source')}
@@ -418,6 +433,15 @@ export function WidgetInspector({
                   />
                 ))}
               </>
+            )}
+            {(widget.type === 'trend-chart' || widget.type === 'clinical-table') && (
+              <TextInput
+                id="widget-view-all-label"
+                labelText={t('viewAllLabel', 'Header link label (e.g. "View all results")')}
+                maxLength={1000}
+                value={String(widget.properties?.viewAllLabel ?? '')}
+                onChange={(event) => property('viewAllLabel', event.target.value || undefined)}
+              />
             )}
             {widget.type === 'trend-chart' && (
               <>

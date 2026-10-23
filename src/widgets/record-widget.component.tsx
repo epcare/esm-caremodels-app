@@ -39,7 +39,7 @@ export function RecordWidget({
   const records = data?.records ?? [];
   const empty = !fields.length && !records.length;
   return (
-    <section>
+    <section className={styles.recordCard}>
       <p className={styles.widgetTitle}>{String(widget.properties?.title ?? widget.id)}</p>
       {['subtitle', 'description'].map((key) =>
         widget.properties?.[key] ? <p key={key}>{String(widget.properties[key])}</p> : null,
@@ -54,7 +54,7 @@ export function RecordWidget({
       ) : (
         <>
           {fields.length > 0 && (
-            <dl>
+            <dl className={styles.recordFields}>
               {fields.map(([key, value]) => (
                 <React.Fragment key={key}>
                   <dt>{t(`patientField.${key}`, key)}</dt>
@@ -66,29 +66,37 @@ export function RecordWidget({
                           ? t('yes', 'Yes')
                           : t('no', 'No')
                         : key.toLowerCase().includes('date')
-                          ? formatClinicalDate(value)
-                          : value}
+                          ? formatClinicalDate(String(value))
+                          : String(value)}
                   </dd>
                 </React.Fragment>
               ))}
             </dl>
           )}
           {data?.scope && <p className={styles.widgetSubtitle}>{t(`recordScope.${data.scope}`, data.scope)}</p>}
-          <ul className={styles.trendList}>
+          <ul className={`${styles.trendList} ${styles.recordList}`}>
             {records.map((record) => (
               <li key={record.uuid} className={styles.recordItem}>
                 {widget.type === 'condition-list' && (
                   <>
-                    <strong>{String(record.name ?? t('unnamedCondition', 'Unnamed diagnosis or condition'))}</strong>
-                    {Boolean(record.clinicalStatus) && <Tag type="gray">{String(record.clinicalStatus)}</Tag>}
+                    <div className={styles.recordMain}>
+                      <span className={styles.recordName}>
+                        {String(record.name ?? t('unnamedCondition', 'Unnamed diagnosis or condition'))}
+                      </span>
+                      {Boolean(record.clinicalStatus) && <Tag type="gray" size="sm">{String(record.clinicalStatus)}</Tag>}
+                    </div>
+                    {Boolean(record.onsetDate || record.effectiveTime) && (
+                      <p className={styles.recordMeta}>
+                        {formatClinicalDate(String(record.onsetDate ?? record.effectiveTime))}
+                      </p>
+                    )}
                     {Boolean(record.certainty) && (
-                      <p>
+                      <p className={styles.recordMeta}>
                         {t('certainty', 'Certainty')}: {String(record.certainty)}
                       </p>
                     )}
-                    <p>{formatClinicalDate(String(record.onsetDate ?? record.effectiveTime ?? ''))}</p>
                     {Boolean(record.endDate) && (
-                      <p>
+                      <p className={styles.recordMeta}>
                         {t('ended', 'Ended')}: {formatClinicalDate(String(record.endDate))}
                       </p>
                     )}
@@ -96,43 +104,53 @@ export function RecordWidget({
                 )}
                 {widget.type === 'medication-summary' && (
                   <>
-                    <strong>{String(record.drugName ?? t('medicationOrder', 'Medication order'))}</strong>
-                    <p>
-                      {t('orderAction', 'Order action')}: {String(record.action ?? '')}
-                    </p>
-                    {typeof record.activeAtAssessment === 'boolean' && (
-                      <Tag type="gray">
-                        {record.activeAtAssessment
-                          ? t('activeAtAssessment', 'Active at assessment')
-                          : t('inactiveAtAssessment', 'Inactive at assessment')}
-                      </Tag>
-                    )}
-                    <p>{formatClinicalDate(String(record.dateActivated ?? ''))}</p>
-                    {Boolean(record.effectiveStopDate) && (
-                      <p>
-                        {t('ended', 'Ended')}: {formatClinicalDate(String(record.effectiveStopDate))}
+                    <div className={styles.recordMain}>
+                      <span className={styles.recordName}>
+                        {String(record.drugName ?? t('medicationOrder', 'Medication order'))}
+                      </span>
+                      {typeof record.activeAtAssessment === 'boolean' && (
+                        <Tag type={record.activeAtAssessment ? 'green' : 'gray'} size="sm">
+                          {record.activeAtAssessment
+                            ? t('activeAtAssessment', 'Active at assessment')
+                            : t('inactiveAtAssessment', 'Inactive at assessment')}
+                        </Tag>
+                      )}
+                    </div>
+                    {record.dose !== undefined && (
+                      <p className={styles.recordMeta}>
+                        {t('dose', 'Dose')}: {String(record.dose)}
                       </p>
                     )}
-                    {record.dose !== undefined && (
-                      <p>
-                        {t('dose', 'Dose')}: {String(record.dose)}
+                    {Boolean(record.action) && (
+                      <p className={styles.recordMeta}>
+                        {t('orderAction', 'Order action')}: {String(record.action)}
+                      </p>
+                    )}
+                    {Boolean(record.dateActivated) && (
+                      <p className={styles.recordMeta}>{formatClinicalDate(String(record.dateActivated))}</p>
+                    )}
+                    {Boolean(record.effectiveStopDate) && (
+                      <p className={styles.recordMeta}>
+                        {t('ended', 'Ended')}: {formatClinicalDate(String(record.effectiveStopDate))}
                       </p>
                     )}
                   </>
                 )}
                 {widget.type === 'program-summary' && (
                   <>
-                    <p>
-                      {t('enrollmentDate', 'Enrollment date')}: {formatClinicalDate(String(record.dateEnrolled ?? ''))}
-                    </p>
+                    {Boolean(record.dateEnrolled) && (
+                      <p className={styles.recordMeta}>
+                        {t('enrollmentDate', 'Enrollment date')}: {formatClinicalDate(String(record.dateEnrolled))}
+                      </p>
+                    )}
                     {Boolean(record.dateCompleted) && (
-                      <p>
+                      <p className={styles.recordMeta}>
                         {t('completionDate', 'Completion date')}: {formatClinicalDate(String(record.dateCompleted))}
                       </p>
                     )}
                     {Array.isArray(record.currentStates) &&
-                      record.currentStates.map((state: { uuid: string; stateUuid: string; startDate: string }) => (
-                        <p key={state.uuid}>
+                      (record.currentStates as Array<{ uuid: string; stateUuid: string; startDate: string }>).map((state) => (
+                        <p key={state.uuid} className={styles.recordMeta}>
                           {t('programStateReference', 'Program state reference')}: {state.stateUuid} ·{' '}
                           {formatClinicalDate(state.startDate)}
                         </p>

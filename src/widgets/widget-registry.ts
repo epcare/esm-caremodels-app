@@ -85,6 +85,40 @@ const manifestDefinitions: Array<
     fixture: coded,
   },
   {
+    id: 'key-value-metric',
+    type: 'metric',
+    label: 'Key Value Pair',
+    group: 'clinical',
+    data: true,
+    resultTypes: scalar,
+    dimensions: { w: 6, h: 3 },
+    properties: { presentation: 'key-value' },
+    configurable: ['title', 'subtitle', 'description', 'emptyText', 'unit'],
+    fixture: {
+      type: 'demonstration',
+      values: [
+        { obsUuid: 'demo-kv', valueType: 'STRING', value: 'Example value', effectiveTime: '2026-02-01T12:00:00Z' },
+      ],
+    },
+  },
+  {
+    id: 'date-metric',
+    type: 'metric',
+    label: 'Date Metric',
+    group: 'clinical',
+    data: true,
+    resultTypes: scalar,
+    dimensions: { w: 6, h: 3 },
+    properties: { presentation: 'date' },
+    configurable: ['title', 'subtitle', 'description', 'emptyText'],
+    fixture: {
+      type: 'demonstration',
+      values: [
+        { obsUuid: 'demo-date', valueType: 'DATE', value: '2026-11-15', effectiveTime: '2026-02-01T12:00:00Z' },
+      ],
+    },
+  },
+  {
     id: 'trend-chart',
     type: 'trend-chart',
     label: 'Trend Chart',
@@ -93,7 +127,7 @@ const manifestDefinitions: Array<
     resultTypes: ['TIMESERIES', 'NUMBER'],
     dimensions: { w: 12, h: 6 },
     properties: { chartType: 'line' },
-    configurable: ['title', 'subtitle', 'chartType', 'showDataTable', 'unit', 'emptyText'],
+    configurable: ['title', 'subtitle', 'chartType', 'showDataTable', 'unit', 'emptyText', 'viewAllLabel'],
     fixture: numeric,
   },
   {
@@ -105,7 +139,7 @@ const manifestDefinitions: Array<
     resultTypes: ['TABLE', ...scalar],
     dimensions: { w: 12, h: 5 },
     properties: {},
-    configurable: ['title', 'subtitle', 'emptyText', 'pageSize'],
+    configurable: ['title', 'subtitle', 'emptyText', 'pageSize', 'viewAllLabel'],
     fixture: numeric,
   },
   {
@@ -342,11 +376,16 @@ export const unavailableWidgets = [
   { label: 'Custom Metric (Derived)', group: 'advanced' },
 ];
 export function manifestFor(widget: WidgetInstance) {
-  return widgetManifest.find(
-    (item) =>
-      item.id ===
-      (widget.type === 'metric' && widget.properties?.presentation === 'status' ? 'clinical-status' : widget.type),
-  );
+  // Metric presentations share one clinical component; each profile is its own palette entry.
+  const metricProfile =
+    widget.type === 'metric'
+      ? ({
+          status: 'clinical-status',
+          'key-value': 'key-value-metric',
+          date: 'date-metric',
+        }[String(widget.properties?.presentation)] ?? 'metric')
+      : widget.type;
+  return widgetManifest.find((item) => item.id === metricProfile);
 }
 export function fieldsForSource(source?: DataSourceDefinition): Array<string> {
   const id = source?.type === 'registered' ? source.resolverId : source?.type;

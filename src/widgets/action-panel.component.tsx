@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { WorkspaceDescriptorContext } from './workspace-descriptors';
-import { Button, ButtonSet } from '@carbon/react';
+import { Button } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import type { WidgetInstance } from '../types/caremodels';
 import styles from './widgets.scss';
@@ -24,17 +24,18 @@ export function ActionPanelWidget({ widget }: { widget: WidgetInstance }) {
         <p className={styles.widgetSubtitle}>{String(widget.properties?.description)}</p>
       )}
       {!widget.actionIds?.length && <p>{t('noConfiguredActions', 'No actions configured.')}</p>}
-      <ButtonSet>
-        {(widget.actionIds ?? []).map((actionId) => (
+      <div className={styles.actionList}>
+        {(widget.actionIds ?? []).map((actionId, index) => (
           <ActionButton
             key={actionId}
             actionId={actionId}
+            index={index}
             label={String(
               (widget.properties?.actionLabels as Record<string, string> | undefined)?.[actionId] ?? actionId,
             )}
           />
         ))}
-      </ButtonSet>
+      </div>
     </div>
   );
 }
@@ -42,14 +43,16 @@ export function ActionPanelWidget({ widget }: { widget: WidgetInstance }) {
 /**
  * Action execution follows the definition's action declaration. The definition carries the
  * handler type; until the workspace exposes full action metadata, buttons render disabled rather
- * than guessing at behavior.
+ * than guessing at behavior. The first action renders as the panel's emphasized entry, matching
+ * the approved widget catalog.
  */
-function ActionButton({ actionId, label }: { actionId: string; label: string }) {
+function ActionButton({ actionId, label, index }: { actionId: string; label: string; index: number }) {
   const { t } = useTranslation();
   const descriptor = useContext(WorkspaceDescriptorContext)?.actions.find((action) => action.id === actionId);
   return (
     <Button
-      kind="tertiary"
+      kind={index === 0 ? 'primary' : 'tertiary'}
+      size="sm"
       disabled
       title={
         descriptor?.reason

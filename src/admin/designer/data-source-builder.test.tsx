@@ -72,7 +72,7 @@ it('blocks coded sources for trend charts and prevents replacing terminology bin
 it('does not alter a source in a way that breaks another bound widget', () => {
   const definition = blankDefinition();
   definition.dataSources.history = {
-    type: 'latest-observation',
+    type: 'historical-observations',
     conceptAlias: 'concept',
     resultType: 'NUMBER',
     maxResults: 50,
@@ -80,7 +80,8 @@ it('does not alter a source in a way that breaks another bound widget', () => {
   definition.workspace.tabs[0].widgets = [{ id: 'trend', type: 'trend-chart', dataSource: 'history' }];
   const onChange = vi.fn();
   render(<SourceSettings sourceKey="history" definition={definition} onChange={onChange} />);
-  fireEvent.change(screen.getByLabelText('Result type'), { target: { value: 'CODED' } });
+  // Switching the strategy to latest-value caps results at 1, which breaks the bound chart.
+  fireEvent.change(screen.getByLabelText('Selection strategy'), { target: { value: 'latest' } });
   expect(onChange).not.toHaveBeenCalled();
   expect(screen.getByText('Source change was not applied')).toBeInTheDocument();
 });

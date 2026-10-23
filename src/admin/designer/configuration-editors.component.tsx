@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  Accordion,
+  AccordionItem,
   Button,
   Checkbox,
   InlineNotification,
@@ -14,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import type { ActionDefinition, ModelDefinition, RuleNode } from '../../types/caremodels';
 import type { OpenmrsForm } from '../../api/caremodels.resource';
 import { FormMultiSelector, ResourceSelector } from '../resource-selector.component';
-import { DataSourceBuilder, SourceSettings } from './data-source-builder.component';
+import { DataSourcesManager } from './data-sources-manager.component';
 import { RuleBuilder, emptyGroup } from './rule-builder.component';
 import styles from './designer.scss';
 
@@ -24,83 +26,77 @@ const validAlias = (value: string) => /^[a-z][a-zA-Z0-9._-]{0,99}$/.test(value);
 export function DataSourcesEditor({ definition, onChange }: EditorProps) {
   const { t } = useTranslation();
   const [alias, setAlias] = useState('');
-  const [bindingType, setBindingType] = useState<'concepts' | 'programs' | 'encounterTypes' | 'codedAnswers'>(
+  const [bindingType, setBindingType] = useState<
+    'concepts' | 'programs' | 'encounterTypes' | 'forms' | 'codedAnswers'
+  >(
     'concepts',
   );
-  const sources = Object.entries(definition.dataSources);
   return (
     <Stack gap={5}>
-      <h3>{t('terminologyBindings', 'OpenMRS resource bindings')}</h3>
-      <Select
-        id="binding-type"
-        labelText={t('resourceType', 'Resource type')}
-        value={bindingType}
-        onChange={(e) => setBindingType(e.target.value as typeof bindingType)}>
-        {['concepts', 'programs', 'encounterTypes', 'codedAnswers'].map((key) => (
-          <SelectItem key={key} value={key} text={key} />
-        ))}
-      </Select>
-      <TextInput
-        id="binding-alias"
-        labelText={t('alias', 'Alias')}
-        value={alias}
-        invalid={Boolean(alias) && !validAlias(alias)}
-        invalidText={t('aliasFormat', 'Use a letter followed by letters, digits, dots, underscores or hyphens.')}
-        onChange={(e) => setAlias(e.target.value)}
-      />
-      <ResourceSelector
-        key={bindingType}
-        resource={
-          bindingType === 'programs' ? 'program' : bindingType === 'encounterTypes' ? 'encountertype' : 'concept'
-        }
-        label={t('findResource', 'Find an existing resource')}
-        onSelect={(choice) => {
-          if (!validAlias(alias)) return;
-          onChange({
-            ...definition,
-            terminology: {
-              ...definition.terminology,
-              [bindingType]: { ...definition.terminology[bindingType], [alias]: choice.uuid },
-            },
-          });
-        }}
-      />
-      {Object.entries(definition.terminology).map(([type, aliases]) => (
-        <Tile key={type}>
-          <strong>{type}</strong>
-          {Object.entries(aliases ?? {}).map(([key, uuid]) => (
-            <p key={key}>
-              {key}: {uuid}
+      <DataSourcesManager definition={definition} onChange={onChange} />
+      <Accordion align="start">
+        <AccordionItem title={t('terminologyBindings', 'Terminology bindings (advanced)')}>
+          <Stack gap={5}>
+            <h3>{t('terminologyBindings', 'OpenMRS resource bindings')}</h3>
+            <Select
+              id="binding-type"
+              labelText={t('resourceType', 'Resource type')}
+              value={bindingType}
+              onChange={(e) => setBindingType(e.target.value as typeof bindingType)}>
+              {['concepts', 'programs', 'encounterTypes', 'forms', 'codedAnswers'].map((key) => (
+                <SelectItem key={key} value={key} text={key} />
+              ))}
+            </Select>
+            <TextInput
+              id="binding-alias"
+              labelText={t('alias', 'Alias')}
+              value={alias}
+              invalid={Boolean(alias) && !validAlias(alias)}
+              invalidText={t('aliasFormat', 'Use a letter followed by letters, digits, dots, underscores or hyphens.')}
+              onChange={(e) => setAlias(e.target.value)}
+            />
+            <ResourceSelector
+              key={bindingType}
+              resource={
+                bindingType === 'programs'
+                  ? 'program'
+                  : bindingType === 'encounterTypes'
+                    ? 'encountertype'
+                    : bindingType === 'forms'
+                      ? 'form'
+                      : 'concept'
+              }
+              label={t('findResource', 'Find an existing resource')}
+              onSelect={(choice) => {
+                if (!validAlias(alias)) return;
+                onChange({
+                  ...definition,
+                  terminology: {
+                    ...definition.terminology,
+                    [bindingType]: { ...definition.terminology[bindingType], [alias]: choice.uuid },
+                  },
+                });
+              }}
+            />
+            {Object.entries(definition.terminology).map(([type, aliases]) => (
+              <Tile key={type}>
+                <strong>{type}</strong>
+                {Object.entries(aliases ?? {}).map(([key, uuid]) => (
+                  <p key={key}>
+                    {key}: {uuid}
+                  </p>
+                ))}
+              </Tile>
+            ))}
+            <p className={styles.sectionHint}>
+              {t(
+                'terminologyManagedBySourcesHint',
+                'Creating or editing a data source keeps its resource alias and exact UUID in sync automatically. This section is for pre-declaring shared aliases.',
+              )}
             </p>
-          ))}
-        </Tile>
-      ))}
-      <h3>{t('dataSources', 'Clinical data sources')}</h3>
-      <DataSourceBuilder definition={definition} onSave={(next) => onChange(next)} />
-      {sources.map(([key]) => {
-        const used = definition.workspace.tabs.some((tab) =>
-          tab.widgets.some((widget) => widget.dataSource === key || widget.dataSources?.includes(key)),
-        );
-        return (
-          <Tile key={key}>
-            <Stack gap={4}>
-              <h4>{key}</h4>
-              <SourceSettings sourceKey={key} definition={definition} onChange={onChange} />
-              <Button
-                kind="danger--ghost"
-                disabled={used}
-                title={used ? t('sourceInUse', 'Remove widget bindings before deleting this source.') : undefined}
-                onClick={() => {
-                  const next = { ...definition.dataSources };
-                  delete next[key];
-                  onChange({ ...definition, dataSources: next });
-                }}>
-                {t('removeDataSource', 'Remove data source')}
-              </Button>
-            </Stack>
-          </Tile>
-        );
-      })}
+          </Stack>
+        </AccordionItem>
+      </Accordion>
     </Stack>
   );
 }
@@ -378,13 +374,53 @@ export function EnrollmentEditor({ definition, onChange }: EditorProps) {
     'OBSERVATION_CHANGED',
     'OBSERVATION_VOIDED',
   ];
+  const referenceOptions = (type: string) => {
+    if (type.startsWith('ENCOUNTER_'))
+      return {
+        field: 'encounterTypeAlias' as const,
+        label: t('encounterTypeAlias', 'Encounter type alias'),
+        values: definition.terminology.encounterTypes ?? {},
+      };
+    if (type.startsWith('PROGRAM_'))
+      return {
+        field: 'programAlias' as const,
+        label: t('programAlias', 'Program alias'),
+        values: definition.terminology.programs ?? {},
+      };
+    return {
+      field: 'conceptAlias' as const,
+      label: t('conceptAlias', 'Concept alias'),
+      values: definition.terminology.concepts ?? {},
+    };
+  };
+  const updateTrigger = (index: number, nextType: string, selectedAlias?: string, replaceReference = false) => {
+    const options = referenceOptions(nextType);
+    setEnrollment({
+      ...enrollment,
+      triggers: enrollment.triggers!.map((item, i) => {
+        if (i !== index) return item;
+        // Write one typed alias field. Generic legacy `alias` values are normalized when edited.
+        const { alias: legacyAlias, conceptAlias, encounterTypeAlias, programAlias, ...rest } = item;
+        const existingTyped = conceptAlias ?? encounterTypeAlias ?? programAlias;
+        const legacyResolved = legacyAlias && options.values[legacyAlias]
+          ? legacyAlias
+          : Object.entries(options.values).find(([, uuid]) => uuid === legacyAlias)?.[0];
+        const value = replaceReference
+          ? selectedAlias
+          : existingTyped && options.values[existingTyped]
+            ? existingTyped
+            : legacyResolved;
+        return { ...rest, type: nextType, [options.field]: value || undefined };
+      }),
+    });
+  };
   return (
     <Stack gap={5}>
       <InlineNotification
         kind="info"
         title={t(
           'ruleConfigurationOnly',
-          'Rules are configuration only until validated by the backend. The supplied backend has no event-driven enrollment engine.',
+          'The backend evaluates published enrollment rules when a configured clinical trigger matches. A trigger without a matching enrollment rule does not enroll a patient.',
         )}
         hideCloseButton
       />
@@ -432,31 +468,42 @@ export function EnrollmentEditor({ definition, onChange }: EditorProps) {
             id={`trigger-${index}`}
             labelText={t('triggerType', 'Trigger type')}
             value={trigger.type}
-            onChange={(e) =>
-              setEnrollment({
-                ...enrollment,
-                triggers: enrollment.triggers!.map((item, i) =>
-                  i === index ? { ...item, type: e.target.value } : item,
-                ),
-              })
-            }>
+            onChange={(e) => updateTrigger(index, e.target.value)}>
             {triggerTypes.map((type) => (
               <SelectItem key={type} value={type} text={type} />
             ))}
           </Select>
-          <TextInput
-            id={`trigger-alias-${index}`}
-            labelText={t('alias', 'Alias')}
-            value={trigger.alias ?? ''}
-            onChange={(e) =>
-              setEnrollment({
-                ...enrollment,
-                triggers: enrollment.triggers!.map((item, i) =>
-                  i === index ? { ...item, alias: e.target.value || undefined } : item,
-                ),
-              })
-            }
-          />
+          {(() => {
+            const options = referenceOptions(trigger.type);
+            const direct = trigger[options.field];
+            const legacy = trigger.alias;
+            const legacyAlias = legacy && options.values[legacy]
+              ? legacy
+              : Object.entries(options.values).find(([, uuid]) => uuid === legacy)?.[0];
+            const selected = direct && options.values[direct] ? direct : legacyAlias ?? '';
+            return (
+              <>
+                <Select
+                  id={`trigger-alias-${index}`}
+                  labelText={options.label}
+                  value={selected}
+                  onChange={(e) => updateTrigger(index, trigger.type, e.target.value || undefined, true)}>
+                  <SelectItem value="" text={t('anyMatchingResource', 'Any matching resource')} />
+                  {Object.entries(options.values).map(([alias, uuid]) => (
+                    <SelectItem key={alias} value={alias} text={`${alias} — ${uuid}`} />
+                  ))}
+                </Select>
+                {trigger.alias && !direct && selected && options.values[selected] && (
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    onClick={() => updateTrigger(index, trigger.type, selected, true)}>
+                    {t('repairTriggerAlias', 'Repair legacy trigger alias')}
+                  </Button>
+                )}
+              </>
+            );
+          })()}
           <Button
             kind="danger--ghost"
             onClick={() =>

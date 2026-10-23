@@ -705,7 +705,9 @@
                               "presentation": {
                                 "enum": [
                                   "value",
-                                  "status"
+                                  "status",
+                                  "date",
+                                  "key-value"
                                 ]
                               },
                               "statusMappings": {
@@ -788,6 +790,10 @@
                                 "type": "string",
                                 "maxLength": 20
                               },
+                              "viewAllLabel": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
                               "chartType": {
                                 "enum": [
                                   "line",
@@ -824,6 +830,10 @@
                             "maxProperties": 30,
                             "properties": {
                               "title": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
+                              "viewAllLabel": {
                                 "type": "string",
                                 "maxLength": 1000
                               },
