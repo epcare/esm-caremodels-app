@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { navigate } from '@openmrs/esm-framework';
 import CareModelsAdminHome from './care-models-admin-home.component';
-import hivUpdate from '../../configuration/hiv/hiv-workspace-update.json';
+import hivUpdate from '../../configuration/caremodel/hiv/hiv-workspace-update.json';
 import * as api from '../api/caremodels.resource';
 
 const mutate = vi.fn().mockResolvedValue(undefined);

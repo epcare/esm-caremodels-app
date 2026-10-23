@@ -33,7 +33,7 @@ it('enforces result shapes and bounded numeric history without composite sources
 it('reports a selected tab binding path before validate/publish', () => {
   const definition = blankDefinition();
   definition.workspace.tabs[0].widgets = [{ id: 'metric', type: 'metric', dataSource: 'missing' }];
-  expect(widgetBindingErrors(definition)[0]).toMatch(/^\$\.workspace.tabs\[0\].widgets\[0\].dataSource/);
+  expect(widgetBindingErrors(definition)[0]).toMatch(/^\$\.workspace.tabs\[0].widgets\[0].dataSource/);
 });
 it('allows a one-record collection source for tables while preserving chart history constraints', () => {
   const source = {

@@ -27,7 +27,6 @@ export function MetricWidget({
   modelCode: string;
   tabId: string;
 }) {
-  const { t } = useTranslation();
   const title = (widget.properties?.title as string) ?? widget.id;
   const { data, error, isLoading, retry } = useWidgetData(patientUuid, modelCode, tabId, widget.dataSource ?? null);
   const latest = data?.values?.[0];

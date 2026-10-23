@@ -103,7 +103,7 @@ export function FormLauncherWidget({ widget, patientUuid }: { widget: WidgetInst
 
   const launchForm = useCallback(
     (descriptor: FormDescriptor) => {
-      const { visitContext, workspaceGroupVisitUuid } = chart;
+      const { visitContext } = chart;
       if (visitContext?.uuid) {
         launchOnceVisitKnown(descriptor, visitContext);
         return;

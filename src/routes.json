@@ -23,7 +23,8 @@
         "columns": 1,
         "columnSpan": 1,
         "slot": "patient-chart-caremodels-dashboard-slot",
-        "path": "care-models"
+        "path": "care-models",
+        "layoutMode": "anchored"
       },
       "privileges": ["View Care Models"]
     },

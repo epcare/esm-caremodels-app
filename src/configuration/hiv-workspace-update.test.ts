@@ -1,5 +1,5 @@
-import update from '../../configuration/hiv/hiv-workspace-update.json';
-import correctedUpdate from '../../configuration/hiv/hiv-care-simplified-corrected-workspace-update.json';
+import update from '../../configuration/caremodel/hiv/hiv-workspace-update.json';
+import correctedUpdate from '../../configuration/caremodel/hiv/hiv-care-simplified-corrected-workspace-update.json';
 import { parseDefinitionJson } from '../admin/designer/definition-validation';
 import { widgetBindingErrors, widgetManifest } from '../widgets/widget-registry';
 import { mergeWorkspaceUpdate } from './merge-workspace-update.mjs';

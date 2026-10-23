@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import update from '../../../configuration/hiv/hiv-workspace-update.json';
+import update from '../../../configuration/caremodel/hiv/hiv-workspace-update.json';
 import type { ModelDefinition } from '../../types/caremodels';
 import { EnrollmentEditor } from './configuration-editors.component';
 

@@ -158,7 +158,7 @@ export function DataSourcesManager({
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return entries
-      .filter(([key, source]) => filter === 'all' || sourceCategory(source) === filter)
+      .filter(([, source]) => filter === 'all' || sourceCategory(source) === filter)
       .filter(([key, source]) => {
         if (!needle) return true;
         const resource = sourceResource(source);

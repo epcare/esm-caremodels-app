@@ -4,7 +4,7 @@ vi.mock('../../api/caremodels.resource', async (original) => ({ ...(await origin
 beforeEach(() => vi.mocked(fetchForms).mockResolvedValue([]));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { WorkspaceDefinitionImport } from './workspace-definition-import.component';
-import update from '../../../configuration/hiv/hiv-workspace-update.json';
+import update from '../../../configuration/caremodel/hiv/hiv-workspace-update.json';
 import type { ModelDefinition } from '../../types/caremodels';
 function fileOf(text: string) {
   const file = new File([text], 'hiv-workspace.json', { type: 'application/json' });
