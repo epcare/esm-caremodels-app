@@ -47,22 +47,22 @@
       "privileges": [
         "Task: caremodels.model.manage"
       ]
-    },
-    {
-      "name": "care-model-enrollment-launcher",
-      "component": "careModelEnrollmentLauncher",
-      "slot": "patient-actions-slot",
-      "order": 900,
-      "privileges": [
-        "Task: caremodels.member.transition"
-      ]
     }
   ],
   "workspaces2": [
     {
       "name": "care-model-enrollment",
       "component": "careModelEnrollmentWorkspace",
-      "title": "Enroll in care model"
+      "title": "Enroll in care model",
+      "window": "care-model-enrollment"
+    }
+  ],
+  "workspaceWindows2": [
+    {
+      "name": "care-model-enrollment",
+      "group": "patient-chart",
+      "icon": "careModelEnrollmentLauncherButton",
+      "order": 12
     }
   ]
 }

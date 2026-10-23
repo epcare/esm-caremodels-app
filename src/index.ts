@@ -22,8 +22,8 @@ export const careModelEnrollmentWorkspace = getAsyncLifecycle(
   () => import('./patient-summary/enrollment-workspace.component'),
   options,
 );
-export const careModelEnrollmentLauncher = getAsyncLifecycle(
-  // Overflow-menu item in the chart's patient-actions rail; launches the enrollment workspace.
+export const careModelEnrollmentLauncherButton = getAsyncLifecycle(
+  // Extreme-right rail button (patient-chart workspace window); opens the enrollment workspace.
   () => import('./patient-summary/enrollment-launcher.component'),
   options,
 );

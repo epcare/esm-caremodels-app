@@ -1,31 +1,24 @@
-import React, { useCallback } from 'react';
-import { OverflowMenuItem } from '@carbon/react';
-import { launchWorkspace2 } from '@openmrs/esm-framework';
+import React, { type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActionMenuButton2 } from '@openmrs/esm-framework';
+import { HealthCross } from '@carbon/react/icons';
 
 /**
- * Patient-actions rail entry ("extreme right" menu) for Care Model enrollment. It opens the same
- * registered care-model-enrollment workspace as the dashboard button, with the chart's own
- * patient context; enrollment permission is enforced by the extension's privileges registration.
+ * Extreme-right patient-chart rail button for Care Model enrollment. Rendered through the
+ * workspace window system (workspaceWindows2 + ActionMenuButton2), so patient context comes
+ * from the chart's workspace group and the tooltip follows the standard rail styling.
  */
-export default function CareModelEnrollmentLauncher({
-  patient,
-  closeMenu,
-}: {
-  patientUuid?: string;
-  patient?: fhir.Patient;
-  closeMenu?: () => void;
-}) {
+export default function CareModelEnrollmentLauncherButton() {
   const { t } = useTranslation();
-  const launch = useCallback(() => launchWorkspace2('care-model-enrollment'), []);
 
   return (
-    patient && (
-      <OverflowMenuItem
-        itemText={t('enrollInCareModel', 'Enroll in a care model')}
-        onClick={launch}
-        closeMenu={closeMenu}
-      />
-    )
+    <ActionMenuButton2
+      icon={(props: ComponentProps<typeof HealthCross>) => <HealthCross {...props} />}
+      label={t('enrollInCareModel', 'Enroll in a care model')}
+      workspaceToLaunch={{
+        workspaceName: 'care-model-enrollment',
+        workspaceProps: {},
+      }}
+    />
   );
 }
