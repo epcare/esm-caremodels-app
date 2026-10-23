@@ -8,4 +8,6 @@ export const moduleName = '@epcare/esm-caremodels-app';
 export const careModelsBaseUrl = `${restBaseUrl}/caremodels`;
 
 /** Master privilege guarding the whole Care Models feature. */
+export const enrollmentPrivilege = 'Task: caremodels.member.transition';
+
 export const masterPrivilege = 'View Care Models';

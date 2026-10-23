@@ -8,11 +8,12 @@ import {
   patientRequestOptions,
   type RestCollection,
 } from './contract';
-import { careModelsBaseUrl, masterPrivilege } from '../constants';
+import { careModelsBaseUrl, enrollmentPrivilege, masterPrivilege } from '../constants';
 import type {
   CareModelMembership,
   CareModelsSession,
   DataResult,
+  ManualEnrollmentOption,
   RegistryModel,
   WorkspaceTab,
 } from '../types/caremodels';
@@ -28,6 +29,11 @@ export async function fetchSession(): Promise<CareModelsSession> {
 }
 
 /** Master-privilege gate: no Care Models requests are made when this returns false. */
+/** Enrollment permission: the membership-transition privilege that gates manual enrollment. */
+export function hasEnrollmentPrivilege(session: CareModelsSession | undefined): boolean {
+  return Boolean(session?.user?.privileges?.some(({ name }) => name === enrollmentPrivilege));
+}
+
 export function hasMasterPrivilege(session: CareModelsSession | undefined): boolean {
   return Boolean(
     session?.authenticated && session?.user?.privileges?.some((privilege) => privilege.name === masterPrivilege),
@@ -191,6 +197,31 @@ export function useWidgetData(patientUuid: string, modelCode: string, tabId: str
 // ========================
 
 /** Writable fields from ModelOperationRequest.java; response-only fields are excluded. */
+/** Authorized, published, manually enrollable models for one patient; policy-only eligibility. */
+export async function fetchManualEnrollmentOptions(patientUuid: string): Promise<Array<ManualEnrollmentOption>> {
+  const { data } = await openmrsFetch(
+    `${restBaseUrl}/caremodels/manualenrollmentoptions?patient=${encodeURIComponent(patientUuid)}`,
+  );
+  return data.results ?? [];
+}
+
+export interface ManualEnrollmentRequest {
+  operation: 'manual';
+  patient: string;
+  model: string;
+  reason: string;
+}
+
+/** Enrolls via POST /caremodels/membershipoperation; the backend re-validates everything. */
+export async function enrollInCareModel(request: ManualEnrollmentRequest): Promise<unknown> {
+  const { data } = await openmrsFetch(`${restBaseUrl}/caremodels/membershipoperation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  return data;
+}
+
 export type ModelOperationPayload =
   | { operation: 'create'; code: string; name: string; description?: string; privilege: string; definition: string }
   | { operation: 'saveDraft'; code: string; definition: string; expectedRevision: number }

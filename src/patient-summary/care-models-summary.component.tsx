@@ -3,10 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { SWRConfig } from 'swr';
 import { usePatientUuid } from '../utils/use-patient-uuid';
 import { Button, InlineNotification, SkeletonText } from '@carbon/react';
-import { hasMasterPrivilege, useMemberships, useSession } from '../api/caremodels.resource';
+import { showSnackbar } from '@openmrs/esm-framework';
+import {
+  hasEnrollmentPrivilege,
+  hasMasterPrivilege,
+  useMemberships,
+  useSession,
+} from '../api/caremodels.resource';
 import { isAuthorizationError } from '../api/contract';
 import type { CareModelMembership } from '../types/caremodels';
 import { MembershipControls } from './enrollment-controls.component';
+import { EnrollmentModal } from './enrollment-modal.component';
 import { ModelCards } from './model-cards.component';
 import { ModelWorkspace } from './inner-tabs.component';
 import styles from './care-models-summary.scss';
@@ -72,15 +79,16 @@ export default function CareModelsPatientSummary({ patientUuid: providedUuid }: 
     // The model cards and workspace speak for themselves; no visible heading when models load.
     <div className={styles.container} aria-label={t('careModels', 'Care Models')}>
       <SWRConfig key={`${session?.user?.uuid}:${patientUuid}`} value={{ provider: () => new Map() }}>
-        <CareModelsBoard patientUuid={patientUuid} />
+        <CareModelsBoard patientUuid={patientUuid} canEnroll={hasEnrollmentPrivilege(session)} />
       </SWRConfig>
     </div>
   );
 }
 
-function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
+function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | null; canEnroll: boolean }) {
   const { t } = useTranslation();
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
   const {
@@ -118,6 +126,7 @@ function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
     <MembershipControls
       refreshing={refreshing || Boolean(isLoading || isValidating)}
       onRefresh={() => void refresh()}
+      onEnroll={canEnroll && patientUuid ? () => setEnrolling(true) : undefined}
     />
   );
   if (error || refreshFailed) {
@@ -171,9 +180,27 @@ function CareModelsBoard({ patientUuid }: { patientUuid: string | null }) {
       </>
     );
   const selected = models.find((model) => model.modelCode === selectedCode) ?? models[0];
+  const handleEnrolled = async (modelCode: string) => {
+    setEnrolling(false);
+    await refresh();
+    setSelectedCode(modelCode);
+    showSnackbar({
+      kind: 'success',
+      isLowContrast: true,
+      title: t('enrolledTitle', 'Enrollment successful'),
+      subtitle: t('enrolledSubtitle', 'The care model workspace is now available for this patient.'),
+    });
+  };
   return (
     <>
       {controls}
+      {enrolling && patientUuid && (
+        <EnrollmentModal
+          patientUuid={patientUuid}
+          onClose={() => setEnrolling(false)}
+          onEnrolled={(modelCode) => void handleEnrolled(modelCode)}
+        />
+      )}
       <ModelCards
         models={models.map((model) => ({
           modelUuid: model.modelUuid,

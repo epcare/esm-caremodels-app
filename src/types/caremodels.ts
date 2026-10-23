@@ -96,6 +96,19 @@ export interface DataResult {
   }>;
 }
 
+/** One manually enrollable model, as evaluated by GET /caremodels/manualenrollmentoptions. */
+export interface ManualEnrollmentOption {
+  modelUuid: string;
+  modelCode: string;
+  displayLabel: string;
+  category?: string | null;
+  requiresReason: boolean;
+  alreadyEnrolled: boolean;
+  openStatus?: string | null;
+  eligible: boolean;
+  reason?: string | null;
+}
+
 /** Current-session slice used for the master-privilege gate. */
 export interface CareModelsSession {
   authenticated: boolean;
