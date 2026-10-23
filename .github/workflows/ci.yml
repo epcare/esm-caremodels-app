@@ -81,7 +81,8 @@ jobs:
       - name: Version
         # run_number is reused when a failed workflow is rerun, while run_attempt
         # increments. Including both keeps every npm version immutable and unique.
-        run: yarn version --new-version --no-git-tag-version "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}.${{ github.run_attempt }}"
+        # Yarn 4 takes the version as a positional strategy and never tags or commits.
+        run: yarn version --immediate "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}.${{ github.run_attempt }}"
 
       - name: Build
         run: yarn build
