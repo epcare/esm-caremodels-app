@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import update from '../../../configuration/caremodel/hiv/hiv-workspace-update.json';
+import { hivUpdate as update } from '../../configuration/hiv-workspace-update.fixture';
 import type { ModelDefinition } from '../../types/caremodels';
 import { EnrollmentEditor } from './configuration-editors.component';
 
@@ -8,7 +8,7 @@ it('writes a declared typed encounter alias rather than a UUID in the generic al
   const definition = structuredClone(update) as ModelDefinition;
   definition.enrollment = {
     enabled: true,
-    triggers: [{ type: 'ENCOUNTER_SAVED', alias: '8d5b27bc-c2cc-11de-8d13-0010c6dffd0f' }],
+    triggers: [{ type: 'ENCOUNTER_SAVED', alias: update.terminology.encounterTypes!['hiv.artSummary'] }],
   };
   const onChange = vi.fn();
 
