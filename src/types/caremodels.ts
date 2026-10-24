@@ -36,7 +36,9 @@ export interface WidgetInstance {
     | 'medication-summary'
     | 'program-summary'
     | 'patient-summary'
-    | 'care-plan';
+    | 'care-plan'
+    | 'latest-set-results'
+    | 'set-history-trends';
   componentVersion?: string;
   dataSource?: string;
   actionIds?: Array<string>;
@@ -94,6 +96,32 @@ export interface DataResult {
     value?: number | string;
     valueName?: string;
   }>;
+  returnedCount?: number;
+  setConceptUuid?: string;
+  setDisplay?: string | null;
+  groups?: Array<ObservationGroup>;
+}
+
+/** One recorded parent observation group with its member observations. */
+export interface ObservationGroup {
+  parentObsUuid: string;
+  effectiveDate?: string | null;
+  encounterUuid?: string | null;
+  members: Array<SetMember>;
+}
+
+export interface SetMember {
+  obsUuid: string;
+  conceptUuid?: string | null;
+  conceptDisplay?: string | null;
+  effectiveTime?: string | null;
+  datatype: 'NUMERIC' | 'CODED' | 'TEXT' | 'DATE' | 'DATETIME' | 'BOOLEAN' | 'UNKNOWN';
+  value?: number | string | boolean | { conceptUuid: string; display?: string | null } | null;
+  unit?: string | null;
+  qualifier?: string | null;
+  comment?: string | null;
+  referenceRange?: { low?: number | null; high?: number | null };
+  members?: Array<SetMember>;
 }
 
 /** One manually enrollable model, as evaluated by GET /caremodels/manualenrollmentoptions. */
@@ -159,7 +187,8 @@ export interface DataSourceDefinition {
     | 'program-state'
     | 'encounter-query'
     | 'order-query'
-    | 'registered';
+    | 'registered'
+    | 'observation-set';
   fields?: Array<'name' | 'gender' | 'birthdate' | 'birthdateEstimated' | 'dead' | 'deathDate'>;
   conceptAlias?: string;
   programAlias?: string;
@@ -173,6 +202,11 @@ export interface DataSourceDefinition {
   resolverVersion?: string;
   resultType: 'NUMBER' | 'CODED' | 'DATE' | 'STRING' | 'TIMESERIES' | 'TABLE';
   effectiveTime?: 'OBS_DATETIME' | 'ENCOUNTER_DATETIME' | 'NOW';
+  /** Authoring metadata (grouped observation sets); display-only. */
+  label?: string;
+  description?: string;
+  /** Grouped sources: included member concept UUIDs, in set order. */
+  members?: Array<string>;
 }
 export interface FormReference {
   alias: string;

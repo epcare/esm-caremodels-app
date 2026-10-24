@@ -47,8 +47,8 @@ it('allows a one-record collection source for tables while preserving chart hist
 });
 it('represents all catalog entries across enabled and blocked palette entries', async () => {
   const { unavailableWidgets } = await import('./widget-registry');
-  // 25 briefs plus the Key Value Pair and Date Metric metric-presentation profiles.
-  expect(widgetManifest.length + unavailableWidgets.length).toBe(27);
+  // 27 briefs plus the Key Value Pair and Date Metric metric-presentation profiles.
+  expect(widgetManifest.length + unavailableWidgets.length).toBe(29);
 });
 it('rebinds an observation table to typed fields without retaining incompatible columns or units', async () => {
   const { bindWidgetSource } = await import('./widget-registry');
@@ -65,4 +65,39 @@ it('rebinds an observation table to typed fields without retaining incompatible 
   expect(updated.properties?.unit).toBeUndefined();
   expect(updated.properties?.columns).toBeUndefined();
   expect(updated.properties?.sortBy).toBeUndefined();
+});
+
+describe('grouped observation-set widgets', () => {
+  const setSource = {
+    type: 'observation-set',
+    conceptAlias: 'renalPanel.set',
+    resultType: 'TABLE',
+    windowDays: 730,
+    maxResults: 50,
+  } as never;
+
+  it('registers both set widgets with grouped-source requirements', () => {
+    expect(manifestFor({ id: 'w', type: 'latest-set-results' } as never)?.id).toBe('latest-set-results');
+    expect(manifestFor({ id: 'w', type: 'set-history-trends' } as never)?.id).toBe('set-history-trends');
+    expect(
+      sourceCompatibility({ id: 'w', type: 'latest-set-results' } as never, setSource),
+    ).toBeNull();
+    expect(
+      sourceCompatibility({ id: 'w', type: 'set-history-trends' } as never, setSource),
+    ).toBeNull();
+    expect(
+      sourceCompatibility({ id: 'w', type: 'latest-set-results' } as never, {
+        type: 'latest-observation',
+        conceptAlias: 'x',
+        resultType: 'NUMBER',
+      } as never),
+    ).toContain('observation-set');
+  });
+
+  it('keeps synthetic typed fixtures for designer previews', () => {
+    const manifest = manifestFor({ id: 'w', type: 'set-history-trends' } as never);
+    expect(manifest?.fixture.type).toBe('observation-set');
+    expect(manifest?.fixture.groups?.[0].members.some((member) => member.datatype === 'CODED')).toBe(true);
+    expect(manifest?.fixture.groups?.[0].members.some((member) => member.value === null)).toBe(true);
+  });
 });

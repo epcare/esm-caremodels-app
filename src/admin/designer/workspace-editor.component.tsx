@@ -23,10 +23,12 @@ export function WorkspaceEditor({
   definition,
   onChange,
   preview = false,
+  onConfigureSource,
 }: {
   definition: ModelDefinition;
   onChange: (next: ModelDefinition) => void;
   preview?: boolean;
+  onConfigureSource?: () => void;
 }) {
   const { t } = useTranslation();
   const [tabId, setTabId] = useState(definition.workspace.defaultTab ?? definition.workspace.tabs[0].id);
@@ -425,6 +427,7 @@ export function WorkspaceEditor({
                   onWidgetChange={updateWidget}
                   onDefinitionChange={onChange}
                   onPositionChange={updatePosition}
+                  onConfigureSource={onConfigureSource}
                   onCreateSource={(next, key) =>
                     onChange(
                       updateDefinitionTab(next, {

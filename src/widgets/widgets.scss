@@ -246,3 +246,30 @@
   .formRow :global(.cds--btn) { grid-column: 2; justify-self: start; }
   .formReason { grid-column: 2; }
 }
+
+.setMemberValue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.memberComment {
+  display: block;
+  color: var(--cds-text-secondary);
+  font-size: 0.75rem;
+}
+
+.missingValue {
+  color: var(--cds-text-placeholder);
+}
+
+.tableUnit {
+  color: var(--cds-text-secondary);
+}
+
+.historyMembers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+  margin-bottom: 0.5rem;
+}

@@ -252,3 +252,53 @@ it('does not translate malformed registry responses or fallback failures into an
   fetch.mockRejectedValueOnce(new Error('backend unavailable'));
   await expect(fetchRegistryModels('')).rejects.toThrow('backend unavailable');
 });
+
+it('parses valid grouped observation-set results and rejects malformed ones', () => {
+  const valid = {
+    type: 'observation-set',
+    setConceptUuid: 'set-uuid',
+    setDisplay: 'Renal Function Panel',
+    status: 'ok',
+    groups: [
+      {
+        parentObsUuid: 'parent-1',
+        effectiveDate: '2026-09-12T10:24:00Z',
+        encounterUuid: 'enc-1',
+        members: [
+          { obsUuid: 'm1', conceptUuid: 'c1', conceptDisplay: 'Creatinine', datatype: 'NUMERIC', value: 1.2, unit: 'mg/dL' },
+          { obsUuid: 'm2', conceptUuid: 'c2', datatype: 'CODED', value: { conceptUuid: 'a1', display: 'Stage II' } },
+          { obsUuid: 'm3', conceptUuid: 'c3', datatype: 'TEXT', value: null },
+          {
+            obsUuid: 'm4',
+            conceptUuid: 'c4',
+            datatype: 'NUMERIC',
+            value: 6.5,
+            referenceRange: { low: 0, high: 10 },
+            members: [{ obsUuid: 'm5', conceptUuid: 'c5', datatype: 'BOOLEAN', value: true }],
+          },
+        ],
+      },
+    ],
+  };
+  expect(parseDataResult(JSON.stringify(valid))).toEqual(valid);
+  for (const bad of [
+    JSON.stringify({ type: 'observation-set', groups: [] }),
+    JSON.stringify({ type: 'observation-set', setConceptUuid: 'set', groups: 'no' }),
+    JSON.stringify({
+      type: 'observation-set',
+      setConceptUuid: 'set',
+      groups: [{ parentObsUuid: 'p', members: [{ obsUuid: 'm', datatype: 'NUMERIC', value: 'not-number' }] }],
+    }),
+    JSON.stringify({
+      type: 'observation-set',
+      setConceptUuid: 'set',
+      groups: [{ parentObsUuid: 'p', members: [{ obsUuid: 'm', datatype: 'MAGIC', value: 1 }] }],
+    }),
+    JSON.stringify({
+      type: 'observation-set',
+      setConceptUuid: 'set',
+      groups: [{ parentObsUuid: 'p', members: [{ obsUuid: 'm', datatype: 'CODED', value: { display: 'no uuid' } }] }],
+    }),
+  ])
+    expect(() => parseDataResult(bad)).toThrow();
+});

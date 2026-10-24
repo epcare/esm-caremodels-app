@@ -507,7 +507,13 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
                     </div>
                   )}
                   {step === 'enrollmentRules' && <EnrollmentEditor definition={definition} onChange={editDefinition} />}
-                  {step === 'workspace' && <WorkspaceEditor definition={definition} onChange={editDefinition} />}
+                  {step === 'workspace' && (
+                    <WorkspaceEditor
+                      definition={definition}
+                      onChange={editDefinition}
+                      onConfigureSource={() => setStep('dataSources')}
+                    />
+                  )}
                   {step === 'dataSources' && <DataSourcesEditor definition={definition} onChange={editDefinition} />}
                   {step === 'forms' && <FormsEditor definition={definition} onChange={editDefinition} />}
                   {step === 'actions' && <ActionsEditor definition={definition} onChange={editDefinition} />}

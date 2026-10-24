@@ -1,6 +1,5 @@
 import { staticPropertySchema, widgetPropertiesSchema, widgetPropertyErrors } from './widget-properties';
 import type { DataResult, DataSourceDefinition, ModelDefinition, WidgetInstance } from '../types/caremodels';
-
 export type WidgetManifest = {
   id: string;
   type: WidgetInstance['type'];
@@ -39,6 +38,137 @@ const coded: DataResult = {
     },
   ],
 };
+/** Synthetic grouped fixture: every supported member datatype, one missing, one repeated. */
+const setGroups: DataResult = {
+  type: 'observation-set',
+  setConceptUuid: 'demo-set-concept',
+  setDisplay: 'Renal Function Panel',
+  status: 'ok',
+  returnedCount: 3,
+  truncated: false,
+  groups: [
+    {
+      parentObsUuid: 'demo-group-3',
+      effectiveDate: '2026-09-12T10:24:00Z',
+      encounterUuid: 'demo-encounter',
+      members: [
+        {
+          obsUuid: 'demo-m-crea',
+          conceptUuid: 'demo-m-creatinine',
+          conceptDisplay: 'Creatinine',
+          datatype: 'NUMERIC',
+          value: 1.2,
+          unit: 'mg/dL',
+          referenceRange: { low: 0.6, high: 1.3 },
+          effectiveTime: '2026-09-12T10:24:00Z',
+        },
+        {
+          obsUuid: 'demo-m-egfr',
+          conceptUuid: 'demo-m-egfr',
+          conceptDisplay: 'eGFR',
+          datatype: 'NUMERIC',
+          value: 78,
+          unit: 'mL/min/1.73m²',
+          referenceRange: { low: null, high: 90 },
+          effectiveTime: '2026-09-12T10:24:00Z',
+        },
+        {
+          obsUuid: 'demo-m-stage',
+          conceptUuid: 'demo-m-stage',
+          conceptDisplay: 'WHO Stage',
+          datatype: 'CODED',
+          value: { conceptUuid: 'demo-stage-ii', display: 'Stage II' },
+          effectiveTime: '2026-09-12T10:24:00Z',
+        },
+        {
+          obsUuid: 'demo-m-notes',
+          conceptUuid: 'demo-m-notes',
+          conceptDisplay: 'Clinical Notes',
+          datatype: 'TEXT',
+          value: 'Clinically stable',
+          effectiveTime: '2026-09-12T10:24:00Z',
+        },
+        {
+          obsUuid: 'demo-m-missing',
+          conceptUuid: 'demo-m-urea',
+          conceptDisplay: 'Urea',
+          datatype: 'NUMERIC',
+          value: null,
+          unit: 'mmol/L',
+          effectiveTime: '2026-09-12T10:24:00Z',
+        },
+        {
+          obsUuid: 'demo-m-crea-repeat',
+          conceptUuid: 'demo-m-creatinine',
+          conceptDisplay: 'Creatinine',
+          datatype: 'NUMERIC',
+          value: 1.25,
+          unit: 'mg/dL',
+          referenceRange: { low: 0.6, high: 1.3 },
+          effectiveTime: '2026-09-12T11:02:00Z',
+        },
+      ],
+    },
+    {
+      parentObsUuid: 'demo-group-2',
+      effectiveDate: '2026-06-05T09:10:00Z',
+      encounterUuid: 'demo-encounter',
+      members: [
+        {
+          obsUuid: 'demo-m-crea-2',
+          conceptUuid: 'demo-m-creatinine',
+          conceptDisplay: 'Creatinine',
+          datatype: 'NUMERIC',
+          value: 1.1,
+          unit: 'mg/dL',
+          referenceRange: { low: 0.6, high: 1.3 },
+          effectiveTime: '2026-06-05T09:10:00Z',
+        },
+        {
+          obsUuid: 'demo-m-egfr-2',
+          conceptUuid: 'demo-m-egfr',
+          conceptDisplay: 'eGFR',
+          datatype: 'NUMERIC',
+          value: 82,
+          unit: 'mL/min/1.73m²',
+          referenceRange: { low: null, high: 90 },
+          effectiveTime: '2026-06-05T09:10:00Z',
+        },
+      ],
+    },
+    {
+      parentObsUuid: 'demo-group-1',
+      effectiveDate: '2026-03-10T14:22:00Z',
+      encounterUuid: 'demo-encounter',
+      members: [
+        {
+          obsUuid: 'demo-m-crea-1',
+          conceptUuid: 'demo-m-creatinine',
+          conceptDisplay: 'Creatinine',
+          datatype: 'NUMERIC',
+          value: 1.0,
+          unit: 'mg/dL',
+          referenceRange: { low: 0.6, high: 1.3 },
+          effectiveTime: '2026-03-10T14:22:00Z',
+        },
+        {
+          obsUuid: 'demo-m-egfr-1',
+          conceptUuid: 'demo-m-egfr',
+          conceptDisplay: 'eGFR',
+          datatype: 'NUMERIC',
+          value: 88,
+          unit: 'mL/min/1.73m²',
+          referenceRange: { low: null, high: 90 },
+          effectiveTime: '2026-03-10T14:22:00Z',
+        },
+      ],
+    },
+  ],
+};
+const setFixture: DataResult = { ...setGroups };
+const latestSetFixture: DataResult = { ...setGroups, groups: setGroups.groups?.slice(0, 1) };
+/** Synthetic preview for the source builder; never executes a patient query. */
+export const setSourcePreviewFixture: DataResult = latestSetFixture;
 const scalar = ['NUMBER', 'CODED', 'DATE', 'STRING'] as DataSourceDefinition['resultType'][];
 const configurable = [
   'title',
@@ -314,6 +444,65 @@ const manifestDefinitions: Array<
     fixture: { type: 'patient-summary', fields: { name: 'Example patient', gender: 'F' } },
   },
   {
+    id: 'latest-set-results',
+    type: 'latest-set-results',
+    label: 'Latest Set Results',
+    group: 'clinical',
+    data: true,
+    resultTypes: ['TABLE'],
+    dimensions: { w: 6, h: 4 },
+    properties: { density: 'compact', showDate: true, showUnits: true, showReferenceRange: true, showMissing: true, maxVisible: 12 },
+    configurable: [
+      'title',
+      'subtitle',
+      'description',
+      'emptyText',
+      'members',
+      'density',
+      'showDate',
+      'showUnits',
+      'showReferenceRange',
+      'showMissing',
+      'maxVisible',
+    ],
+    fixture: latestSetFixture,
+  },
+  {
+    id: 'set-history-trends',
+    type: 'set-history-trends',
+    label: 'Set History & Trends',
+    group: 'clinical',
+    data: true,
+    resultTypes: ['TABLE'],
+    dimensions: { w: 12, h: 6 },
+    properties: {
+      defaultView: 'chart',
+      defaultRange: '2y',
+      rowsPerPage: 5,
+      showDate: true,
+      showUnits: true,
+      showReferenceRange: false,
+      showMissing: true,
+      chartLayout: 'panels',
+    },
+    configurable: [
+      'title',
+      'subtitle',
+      'description',
+      'emptyText',
+      'members',
+      'defaultView',
+      'defaultRange',
+      'rowsPerPage',
+      'showDate',
+      'showUnits',
+      'showReferenceRange',
+      'showMissing',
+      'chartLayout',
+    ],
+    fixture: setFixture,
+  },
+  {
     id: 'care-plan',
     type: 'care-plan',
     label: 'Care Plan / Milestones',
@@ -351,19 +540,21 @@ export const widgetManifest: Array<WidgetManifest> = manifestDefinitions.map((it
       ? []
       : item.type === 'care-plan'
         ? ['recorded-pathway-descriptor']
-        : item.type === 'condition-list'
-          ? ['conditions']
-          : item.type === 'program-summary'
-            ? ['program-state']
-            : item.type === 'medication-summary'
-              ? ['order-query']
-              : item.type === 'patient-summary'
-                ? ['patient-summary']
-                : item.type === 'timeline'
-                  ? ['encounter-query']
-                  : item.data
-                    ? ['latest-observation']
-                    : ['resolved-action-context'],
+        : ['latest-set-results', 'set-history-trends'].includes(item.id)
+          ? ['observation-set']
+          : item.type === 'condition-list'
+            ? ['conditions']
+            : item.type === 'program-summary'
+              ? ['program-state']
+              : item.type === 'medication-summary'
+                ? ['order-query']
+                : item.type === 'patient-summary'
+                  ? ['patient-summary']
+                  : item.type === 'timeline'
+                    ? ['encounter-query']
+                    : item.data
+                      ? ['latest-observation']
+                      : ['resolved-action-context'],
 }));
 export const unavailableWidgets = [
   { label: 'Care Reminders', group: 'clinical' },
@@ -422,11 +613,13 @@ export function sourceCompatibility(widget: WidgetInstance, source?: DataSourceD
     'medication-summary': ['order-query'],
     'program-summary': ['program-state'],
     'patient-summary': ['patient-summary'],
+    'latest-set-results': ['observation-set'],
+    'set-history-trends': ['observation-set'],
   };
   if (required[widget.type])
     return source.resultType === 'TABLE' && required[widget.type].includes(id ?? '')
       ? null
-      : 'Select a compatible typed record source.';
+      : 'Select a grouped observation-set source with recorded parent groups.';
   if (
     widget.type === 'clinical-table' &&
     source.resultType === 'TABLE' &&

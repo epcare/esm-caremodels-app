@@ -99,6 +99,33 @@ export const widgetPropertiesSchema = {
     orientation: { enum: ['horizontal', 'vertical'] },
     buttonStyle: { enum: ['primary', 'secondary', 'tertiary', 'ghost'] },
     buttonLabel: text,
+    // grouped observation-set widgets (latest-set-results, set-history-trends)
+    density: { enum: ['compact', 'regular'] },
+    showUnits: { type: 'boolean' },
+    showReferenceRange: { type: 'boolean' },
+    showMissing: { type: 'boolean' },
+    maxVisible: { type: 'integer', minimum: 1, maximum: 50 },
+    members: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 50,
+      uniqueItems: true,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['conceptUuid', 'label', 'inTable'],
+        properties: {
+          conceptUuid: { type: 'string', minLength: 1, maxLength: 100 },
+          label: { type: 'string', minLength: 1, maxLength: 100 },
+          inTable: { type: 'boolean' },
+          inChart: { type: 'boolean' },
+        },
+      },
+    },
+    defaultView: { enum: ['chart', 'table'] },
+    rowsPerPage: { type: 'integer', minimum: 5, maximum: 50 },
+    defaultRange: { enum: ['6m', '1y', '2y', '5y', 'all'] },
+    chartLayout: { enum: ['combined', 'panels'] },
   },
 };
 const staticTypes = ['text-note', 'section-heading', 'divider', 'spacer', 'static-callout'];

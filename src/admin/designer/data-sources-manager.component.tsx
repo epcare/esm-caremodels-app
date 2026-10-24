@@ -39,6 +39,7 @@ export function sourceResource(source: DataSourceDefinition): { bucket: Terminol
 }
 
 export function sourceCategory(source: DataSourceDefinition): SourceCategory {
+  if (source.type === 'observation-set') return 'concepts';
   return sourceResource(source)?.bucket ?? 'other';
 }
 
@@ -54,6 +55,8 @@ export function sourceTypeLabel(source: DataSourceDefinition, t: (key: string, f
       return t('sourceType.programState', 'Program state');
     case 'order-query':
       return t('sourceType.orderQuery', 'Order history');
+    case 'observation-set':
+      return t('sourceType.observationSet', 'Grouped observation set');
     case 'registered':
       return t('sourceType.registered', `Registered: ${source.resolverId ?? 'resolver'}`);
   }
@@ -188,7 +191,7 @@ export function DataSourcesManager({
   const { data: resolved } = useSWR(
     resolvedUuid ? ['caremodels-resource-display', selectedResource!.bucket, resolvedUuid] : null,
     ([, bucket, uuid]) => fetchOpenmrsResource(restResource[bucket as TerminologyBucket], uuid),
-    { shouldRetryOnError: false },
+    { shouldRetryOnError: false, revalidateOnFocus: false, revalidateIfStale: false, keepPreviousData: true },
   );
   const widgetUsage = selectedKey ? findWidgetUsage(definition, selectedKey) : [];
   const aliasReferences =

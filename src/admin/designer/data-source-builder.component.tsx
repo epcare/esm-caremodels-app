@@ -15,12 +15,16 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   fetchConceptDetails,
+  fetchConceptSetDetails,
   type OpenmrsChoice,
   type OpenmrsConcept,
+  type OpenmrsConceptSetDetails,
 } from '../../api/caremodels.resource';
 import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
 import { ConceptSelector } from '../concept-selector.component';
 import { sourceCompatibility } from '../../widgets/widget-registry';
+import { SetSourceBuilder } from './data-source-set-builder.component';
+import { RetrievalSettings, SetMembersTable, isValidSetParent } from './data-source-set-shared.component';
 import styles from './designer.scss';
 
 export const validSourceAlias = (value: string) => /^[a-z][a-zA-Z0-9._-]{0,99}$/.test(value);
@@ -46,6 +50,7 @@ export function DataSourceBuilder({
 }) {
   const { t } = useTranslation();
   const [category, setCategory] = useState('observation');
+  const [groupedConcept, setGroupedConcept] = useState<OpenmrsConcept>();
   const [key, setKey] = useState('');
   const [pickerRevision, setPickerRevision] = useState(0);
   const [alias, setAlias] = useState('');
@@ -57,6 +62,15 @@ export function DataSourceBuilder({
   const [maxResults, setMaxResults] = useState(50);
   const [windowDays, setWindowDays] = useState(365);
   const resultType = conceptResultType(concept);
+  // N/A or otherwise unsupported datatypes are never rejected outright: inspect set membership
+  // first. A valid concept set belongs to the grouped observation flow, not this one.
+  const inspectAsSet = Boolean(concept && !resultType);
+  const { data: setDetails, error: setDetailsError } = useSWR<OpenmrsConceptSetDetails>(
+    inspectAsSet ? ['caremodels-concept-set', concept!.uuid] : null,
+    ([, uuid]: [string, string]) => fetchConceptSetDetails(uuid),
+    { shouldRetryOnError: false, revalidateOnFocus: false, revalidateIfStale: false, keepPreviousData: true },
+  );
+  const isValidSet = inspectAsSet && isValidSetParent(setDetails);
   const source: DataSourceDefinition = {
     type: 'latest-observation',
     conceptAlias: alias,
@@ -79,9 +93,17 @@ export function DataSourceBuilder({
         onChange={(event) => setCategory(event.target.value)}>
         <SelectItem value="observation" text={t('observation', 'Observation')} />
         <SelectItem value="records" text={t('clinicalRecords', 'Clinical records')} />
+        <SelectItem value="set" text={t('groupedObservations', 'Grouped Observations (Lab/Concept Set)')} />
       </Select>
       {category === 'records' ? (
         <RecordSourceBuilder definition={definition} onSave={onSave} widget={widget} />
+      ) : category === 'set' ? (
+        <SetSourceBuilder
+          key={groupedConcept?.uuid ?? 'blank'}
+          definition={definition}
+          onSave={onSave}
+          initialConcept={groupedConcept}
+        />
       ) : (
         <>
           <p>
@@ -139,13 +161,37 @@ export function DataSourceBuilder({
                       .join(': ')}
                 </p>
               ))}
-              {!resultType && (
+              {!resultType && isValidSet && (
+                <InlineNotification
+                  kind="success"
+                  hideCloseButton
+                  title={t('validSetConceptShort', 'Valid concept set: {{count}} members found.', {
+                    count: setDetails?.setMembers?.length ?? 0,
+                  })}
+                  subtitle={t(
+                    'validSetSwitchHint',
+                    'The datatype is N/A, which is allowed for grouped observation sets. Single-value sources do not support this concept.',
+                  )}
+                />
+              )}
+              {!resultType && isValidSet && (
+                <Button
+                  kind="primary"
+                  size="sm"
+                  onClick={() => {
+                    setGroupedConcept(concept);
+                    setCategory('set');
+                  }}>
+                  {t('useGroupedSource', 'Use grouped source')}
+                </Button>
+              )}
+              {!resultType && !isValidSet && (setDetails || setDetailsError) && (
                 <InlineNotification
                   kind="warning"
                   hideCloseButton
                   title={t(
                     'unsupportedConceptDatatype',
-                    'This concept datatype is not supported by the registered observation resolver.',
+                    'This concept datatype is not supported by the registered observation resolver and it is not a concept set.',
                   )}
                 />
               )}
@@ -280,6 +326,7 @@ export function SourceSettings({
   const [error, setError] = useState<string | null>(null);
   const source = definition.dataSources[sourceKey];
   if (!source) return null;
+  if (source.type === 'observation-set') return <ObservationSetSourceSettings sourceKey={sourceKey} definition={definition} onChange={onChange} />;
   if (
     ['program-state', 'encounter-query', 'order-query'].includes(source.type) ||
     (source.type === 'registered' &&
@@ -320,14 +367,13 @@ function ObservationSourceSettings({
   onChange: (value: ModelDefinition) => void;
   error: string | null;
   setError: (message: string | null) => void;
-}) {
-  const { t } = useTranslation();
+}) {  const { t } = useTranslation();
   const source = definition.dataSources[sourceKey];
   const conceptUuid = source.conceptAlias ? definition.terminology.concepts?.[source.conceptAlias] : undefined;
   const { data: concept } = useSWR(
     conceptUuid ? ['caremodels-concept-detail', conceptUuid] : null,
     ([, uuid]: [string, string]) => fetchConceptDetails(uuid),
-    { shouldRetryOnError: false },
+    { shouldRetryOnError: false, revalidateOnFocus: false, revalidateIfStale: false, keepPreviousData: true },
   );
   // Result type follows the concept datatype, exactly as at creation time.
   const derivedType = conceptResultType(concept);
@@ -442,6 +488,85 @@ function ObservationSourceSettings({
         value={source.units ?? ''}
         onChange={(event) => update({ units: event.target.value })}
       />
+    </Stack>
+  );
+}
+
+/** Editor for grouped observation-set declarations: identity, retrieval and member selection. */
+function ObservationSetSourceSettings({
+  sourceKey,
+  definition,
+  onChange,
+}: {
+  sourceKey: string;
+  definition: ModelDefinition;
+  onChange: (value: ModelDefinition) => void;
+}) {
+  const { t } = useTranslation();
+  const source = definition.dataSources[sourceKey];
+  const conceptUuid = source.conceptAlias ? definition.terminology.concepts?.[source.conceptAlias] : undefined;
+  const { data: details } = useSWR(
+    conceptUuid ? ['caremodels-concept-set', conceptUuid] : null,
+    ([, uuid]: [string, string]) => fetchConceptSetDetails(uuid),
+    { shouldRetryOnError: false, revalidateOnFocus: false, revalidateIfStale: false, keepPreviousData: true },
+  );
+  const included = source.members ?? (details?.setMembers ?? []).map((member) => member.uuid);
+  if (!source) return null;
+  const update = (patch: Partial<DataSourceDefinition>) => {
+    const next = { ...source, ...patch };
+    const boundWidgets = definition.workspace.tabs
+      .flatMap((tab) => tab.widgets)
+      .filter((widget) => widget.dataSource === sourceKey || widget.dataSources?.includes(sourceKey));
+    const reason = boundWidgets.map((widget) => sourceCompatibility(widget, next)).find(Boolean);
+    if (reason) return; // never let a source edit silently break a bound widget
+    onChange({ ...definition, dataSources: { ...definition.dataSources, [sourceKey]: next } });
+  };
+  return (
+    <Stack gap={4}>
+      <TextInput
+        id={`set-source-label-${sourceKey}`}
+        labelText={t('displayName', 'Display name')}
+        maxLength={100}
+        value={source.label ?? ''}
+        onChange={(event) => update({ label: event.target.value || undefined })}
+      />
+      <TextInput
+        id={`set-source-description-${sourceKey}`}
+        labelText={t('description', 'Description')}
+        maxLength={500}
+        value={source.description ?? ''}
+        onChange={(event) => update({ description: event.target.value || undefined })}
+      />
+      <RetrievalSettings
+        history={(source.maxResults ?? 1) > 1}
+        maxResults={source.maxResults ?? 50}
+        windowDays={source.windowDays ?? 730}
+        onChange={(next) =>
+          update({
+            ...(next.history !== undefined
+              ? { maxResults: next.history ? Math.max(2, source.maxResults ?? 50) : 1 }
+              : {}),
+            ...(next.maxResults !== undefined ? { maxResults: next.maxResults } : {}),
+            ...(next.windowDays !== undefined ? { windowDays: next.windowDays } : {}),
+          })
+        }
+      />
+      {details && isValidSetParent(details) ? (
+        <>
+          <p className={styles.inlineFieldLabel}>{t('membersSummary', 'Members (from the parent set)')}</p>
+          <SetMembersTable
+            members={details.setMembers ?? []}
+            included={included}
+            onChange={(nextIncluded) => update({ members: nextIncluded })}
+          />
+        </>
+      ) : conceptUuid ? (
+        <InlineNotification
+          kind="warning"
+          hideCloseButton
+          title={t('parentSetUnavailable', 'The parent concept is unavailable or is not a valid set.')}
+        />
+      ) : null}
     </Stack>
   );
 }

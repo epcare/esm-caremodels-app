@@ -1,7 +1,53 @@
-import type { DataResult, StorageEnvelope, WorkspaceTab } from '../types/caremodels';
+import type { DataResult, SetMember, StorageEnvelope, WorkspaceTab } from '../types/caremodels';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const setMemberDatatypes = ['NUMERIC', 'CODED', 'TEXT', 'DATE', 'DATETIME', 'BOOLEAN', 'UNKNOWN'];
+
+/** Fail closed on malformed grouped members; typed values are never coerced. */
+function validSetMember(value: unknown): value is SetMember {
+  if (
+    !isRecord(value) ||
+    typeof value.obsUuid !== 'string' ||
+    (value.conceptUuid != null && typeof value.conceptUuid !== 'string') ||
+    (value.conceptDisplay != null && typeof value.conceptDisplay !== 'string') ||
+    (value.effectiveTime != null && typeof value.effectiveTime !== 'string') ||
+    !setMemberDatatypes.includes(String(value.datatype)) ||
+    (value.unit != null && typeof value.unit !== 'string') ||
+    (value.qualifier != null && typeof value.qualifier !== 'string') ||
+    (value.comment != null && typeof value.comment !== 'string')
+  )
+    return false;
+  const { value: memberValue, referenceRange, members } = value;
+  const coded =
+    isRecord(memberValue) &&
+    typeof memberValue.conceptUuid === 'string' &&
+    (memberValue.display == null || typeof memberValue.display === 'string');
+  // NUMERIC and BOOLEAN are typed strictly; other datatypes accept strings or null.
+  const typed =
+    value.datatype === 'NUMERIC'
+      ? memberValue == null || (typeof memberValue === 'number' && Number.isFinite(memberValue))
+      : value.datatype === 'BOOLEAN'
+        ? memberValue == null || typeof memberValue === 'boolean'
+        : true;
+  const plain =
+    memberValue == null ||
+    typeof memberValue === 'string' ||
+    typeof memberValue === 'number' ||
+    typeof memberValue === 'boolean';
+  if (!typed || (!plain && !coded)) return false;
+  if (
+    referenceRange !== undefined &&
+    (!isRecord(referenceRange) ||
+      ['low', 'high'].some((key) => referenceRange[key] != null && typeof referenceRange[key] !== 'number'))
+  )
+    return false;
+  return (
+    members === undefined ||
+    (Array.isArray(members) && members.length <= 500 && members.every((nested: unknown) => validSetMember(nested)))
+  );
 }
 
 /** Fail closed on malformed clinical results rather than rendering unchecked JSON. */
@@ -40,6 +86,27 @@ export function parseDataResult(json: unknown): DataResult {
     'encounter-diagnoses',
     'patient-summary',
   ];
+  if (result.type === 'observation-set') {
+    if (
+      typeof result.setConceptUuid !== 'string' ||
+      (result.setDisplay != null && typeof result.setDisplay !== 'string') ||
+      !Array.isArray(result.groups) ||
+      result.groups.length > 1000
+    )
+      throw new Error('Invalid observation-set result');
+    for (const group of result.groups) {
+      if (
+        !isRecord(group) ||
+        typeof group.parentObsUuid !== 'string' ||
+        (group.effectiveDate != null && typeof group.effectiveDate !== 'string') ||
+        (group.encounterUuid != null && typeof group.encounterUuid !== 'string') ||
+        !Array.isArray(group.members) ||
+        group.members.length > 500 ||
+        group.members.some((member: unknown) => !validSetMember(member))
+      )
+        throw new Error('Invalid observation-set group');
+    }
+  }
   if (typed.includes(result.type)) {
     if (result.type === 'patient-summary') {
       const allowed = ['name', 'gender', 'birthdate', 'birthdateEstimated', 'dead', 'deathDate'];
@@ -57,7 +124,7 @@ export function parseDataResult(json: unknown): DataResult {
       result.records.some((record) => !isRecord(record) || typeof record.uuid !== 'string')
     )
       throw new Error('Invalid clinical records result');
-    if (Array.isArray(result.records)) {
+  if (Array.isArray(result.records)) {
       const textFields = [
         'name',
         'clinicalStatus',

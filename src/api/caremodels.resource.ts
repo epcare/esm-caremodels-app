@@ -401,6 +401,7 @@ export interface OpenmrsConcept extends OpenmrsChoice {
   datatype?: { uuid: string; display: string; name?: string };
   conceptClass?: { uuid: string; display: string; name?: string };
   units?: string;
+  set?: boolean;
   answers?: Array<OpenmrsChoice>;
   mappings?: Array<{
     display?: string;
@@ -409,9 +410,37 @@ export interface OpenmrsConcept extends OpenmrsChoice {
 }
 export async function searchConcepts(q: string): Promise<Array<OpenmrsConcept>> {
   const representation =
-    'custom:(uuid,display,datatype:(uuid,display,name),conceptClass:(uuid,display,name),units,answers:(uuid,display),mappings:(display,conceptReferenceTerm:(code,conceptSource:(display))))';
+    'custom:(uuid,display,datatype:(uuid,display,name),conceptClass:(uuid,display,name),units,set,' +
+    'answers:(uuid,display),mappings:(display,conceptReferenceTerm:(code,conceptSource:(display))))';
   const { data } = await openmrsFetch<{ results: Array<OpenmrsConcept> }>(
     `${restBaseUrl}/concept?q=${encodeURIComponent(q)}&v=${representation}&limit=50`,
   );
   return data.results;
+}
+
+/** A set member as discovered from the parent concept's actual set membership. */
+export interface OpenmrsSetMember {
+  uuid: string;
+  display: string;
+  datatype?: { uuid: string; display: string } | null;
+  conceptClass?: { uuid: string; display: string } | null;
+}
+
+/** Set metadata of one concept: isSet flag, members (in set order) and synonym names. */
+export interface OpenmrsConceptSetDetails extends OpenmrsConcept {
+  set?: boolean;
+  setMembers?: Array<OpenmrsSetMember>;
+  names?: Array<{ name?: string; conceptNameType?: string; localePreferred?: boolean; voided?: boolean }>;
+}
+
+/** Full set metadata for grouped-source validation; membership, not datatype, is the criterion. */
+export async function fetchConceptSetDetails(uuid: string): Promise<OpenmrsConceptSetDetails> {
+  const representation =
+    'custom:(uuid,display,datatype:(uuid,display,name),conceptClass:(uuid,display,name),units,set,' +
+    'setMembers:(uuid,display,datatype:(uuid,display),conceptClass:(uuid,display)),' +
+    'names:(name,conceptNameType,localePreferred,voided))';
+  const { data } = await openmrsFetch<OpenmrsConceptSetDetails>(
+    `${restBaseUrl}/concept/${encodeURIComponent(uuid)}?v=${representation}`,
+  );
+  return data;
 }

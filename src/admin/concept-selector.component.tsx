@@ -28,7 +28,12 @@ export function ConceptSelector({ onSelect }: { onSelect: (concept: OpenmrsConce
         onChange={({ selectedItem }) => selectedItem && onSelect(selectedItem)}
         itemToElement={(item) => (
           <div>
-            <strong>{item.display}</strong>
+            <strong>
+              {item.display}
+              {(item.set || item.datatype?.display?.toLowerCase() === 'n/a') && (
+                <span> · {item.set ? 'Concept set' : 'N/A datatype'}</span>
+              )}
+            </strong>
             <p>{item.uuid}</p>
             <p>{[item.datatype?.display, item.conceptClass?.display, item.units].filter(Boolean).join(' · ')}</p>
           </div>
