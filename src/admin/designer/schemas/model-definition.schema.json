@@ -273,7 +273,8 @@
                         "medication-summary",
                         "program-summary",
                         "patient-summary",
-                        "care-plan"
+                        "care-plan",
+                        "notes-list"
                       ]
                     },
                     "componentVersion": {
@@ -1504,6 +1505,58 @@
                           }
                         }
                       }
+                    },
+                    {
+                      "if": {
+                        "properties": {
+                          "type": {
+                            "const": "notes-list"
+                          }
+                        }
+                      },
+                      "then": {
+                        "properties": {
+                          "properties": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "maxProperties": 30,
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
+                              "subtitle": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              "emptyText": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
+                              "emptyMessage": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
+                              "viewAllLabel": {
+                                "type": "string",
+                                "maxLength": 1000
+                              },
+                              "maxVisible": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 50
+                              },
+                              "showPreview": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   ]
                 }
@@ -1679,6 +1732,11 @@
           "type": "string",
           "pattern": "^[0-9a-fA-F]{32}$",
           "description": "CIEL-style non-dashed OpenMRS UUID"
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9A-Za-z]{1,12}A{6,}$",
+          "description": "Legacy M&C/CIEL A-padded OpenMRS identifier (e.g. 165095AAAA\u2026, 5089AAAA\u2026)"
         }
       ]
     },

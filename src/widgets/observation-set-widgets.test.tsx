@@ -182,3 +182,39 @@ it('set-history-trends plots numeric members only and separates panels for incom
   const data = charts.line.mock.calls[0][1].data as Array<{ group: string; value: number }>;
   expect(data.every((point) => typeof point.value === 'number')).toBe(true);
 });
+
+describe('notes-list (accordion notes)', () => {
+  const notes = {
+    type: 'latest-observation',
+    values: Array.from({ length: 7 }, (_, i) => ({
+      obsUuid: `note-${i}`,
+      valueType: 'STRING' as const,
+      value:
+        i === 0
+          ? 'Patient reports adherence challenges; counseling provided and a follow-up visit was scheduled for next month.'
+          : `Note ${i}`,
+      effectiveTime: `2026-0${9 - i}-1${i}T10:24:00Z`,
+    })),
+  };
+
+  it('renders the most recent notes as collapsed accordion rows with date and preview', () => {
+    vi.mocked(useWidgetData).mockReturnValue({ data: notes, isLoading: false } as never);
+    render(
+      <WidgetRenderer
+        {...props}
+        widget={{ id: 'notes', type: 'notes-list', dataSource: 'clinicalNotes', properties: { maxVisible: 5 } }}
+      />,
+    );
+    const full = screen.getAllByText(/adherence challenges/);
+    // the long note is previewed, not printed in full, until expanded
+    expect(full[0]).toHaveTextContent('…');
+    expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(5);
+    expect(screen.getByText('2 older notes not shown')).toBeInTheDocument();
+  });
+
+  it('shows an empty state without fabricating notes', () => {
+    vi.mocked(useWidgetData).mockReturnValue({ data: { type: 'latest-observation', values: [] }, isLoading: false } as never);
+    render(<WidgetRenderer {...props} widget={{ id: 'notes', type: 'notes-list', dataSource: 'clinicalNotes' }} />);
+    expect(screen.getByText('No notes recorded')).toBeInTheDocument();
+  });
+});

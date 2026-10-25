@@ -503,6 +503,25 @@ const manifestDefinitions: Array<
     fixture: setFixture,
   },
   {
+    id: 'notes-list',
+    type: 'notes-list',
+    label: 'Clinical Notes',
+    group: 'clinical',
+    data: true,
+    resultTypes: ['STRING'],
+    dimensions: { w: 6, h: 4 },
+    properties: { maxVisible: 5, showPreview: true },
+    configurable: ['title', 'subtitle', 'description', 'emptyText', 'maxVisible', 'showPreview'],
+    fixture: {
+      type: 'latest-observation',
+      values: [
+        { obsUuid: 'demo-note-1', valueType: 'STRING', value: 'Patient reports adherence challenges; counseling provided and follow-up scheduled.', effectiveTime: '2026-09-12T10:24:00Z' },
+        { obsUuid: 'demo-note-2', valueType: 'STRING', value: 'Clinically stable on current regimen.', effectiveTime: '2026-06-05T09:10:00Z' },
+        { obsUuid: 'demo-note-3', valueType: 'STRING', value: 'Routine review, no complaints.', effectiveTime: '2026-03-10T14:22:00Z' },
+      ],
+    },
+  },
+  {
     id: 'care-plan',
     type: 'care-plan',
     label: 'Care Plan / Milestones',
@@ -668,8 +687,11 @@ export function widgetBindingErrors(definition: ModelDefinition): Array<string> 
 
 export function bindWidgetSource(widget: WidgetInstance, key: string, source?: DataSourceDefinition): WidgetInstance {
   const properties = { ...widget.properties };
+  // `unit` is a contract-legal property only on widgets that declare it; writing it anywhere
+  // else fails backend per-type property validation.
+  const acceptsUnit = manifestFor(widget)?.configurable.includes('unit') ?? false;
   const observation = ['latest-observation', 'historical-observations'].includes(source?.type ?? '');
-  if (observation) properties.unit = source?.units ?? '';
+  if (observation && acceptsUnit) properties.unit = source?.units ?? '';
   else delete properties.unit;
   if (widget.type === 'clinical-table' && source?.resultType === 'TABLE') {
     delete properties.sortBy;

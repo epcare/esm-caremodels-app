@@ -47,8 +47,8 @@ it('allows a one-record collection source for tables while preserving chart hist
 });
 it('represents all catalog entries across enabled and blocked palette entries', async () => {
   const { unavailableWidgets } = await import('./widget-registry');
-  // 27 briefs plus the Key Value Pair and Date Metric metric-presentation profiles.
-  expect(widgetManifest.length + unavailableWidgets.length).toBe(29);
+  // 28 briefs plus the Key Value Pair and Date Metric metric-presentation profiles.
+  expect(widgetManifest.length + unavailableWidgets.length).toBe(30);
 });
 it('rebinds an observation table to typed fields without retaining incompatible columns or units', async () => {
   const { bindWidgetSource } = await import('./widget-registry');

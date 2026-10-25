@@ -13,12 +13,18 @@
   margin-bottom: 0.75rem;
 }
 
-/* The refresh control is a small corner detail, not a toolbar row. */
-.enrollmentToolbar {
-  position: absolute;
-  top: 0.25rem;
-  inset-inline-end: 0.25rem;
-  z-index: 1;
+/* Section title and enrollment actions share one header line. */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.sectionHeader .heading {
+  margin: 0;
 }
 
 .emptyState {
@@ -136,10 +142,9 @@
 
 .enrollmentToolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  gap: 0.5rem;
   justify-content: flex-end;
-  margin-bottom: 1rem;
 }
 
 .enrollmentOption {

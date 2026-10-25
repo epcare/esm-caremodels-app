@@ -273,3 +273,21 @@
   gap: 0 1.25rem;
   margin-bottom: 0.5rem;
 }
+
+.noteDate {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+.notePreview {
+  color: var(--cds-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noteBody {
+  white-space: pre-wrap;
+  margin: 0;
+}

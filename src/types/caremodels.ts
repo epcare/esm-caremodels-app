@@ -38,7 +38,8 @@ export interface WidgetInstance {
     | 'patient-summary'
     | 'care-plan'
     | 'latest-set-results'
-    | 'set-history-trends';
+    | 'set-history-trends'
+    | 'notes-list';
   componentVersion?: string;
   dataSource?: string;
   actionIds?: Array<string>;

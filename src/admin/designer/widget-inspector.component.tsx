@@ -607,6 +607,27 @@ export function WidgetInspector({
             {setWidgetTypes.includes(widget.type) && (
               <SetWidgetDisplay widget={widget} onWidgetChange={onWidgetChange} />
             )}
+            {widget.type === 'notes-list' && (
+              <>
+                <NumberInput
+                  id="notes-max-visible"
+                  label={t('visibleNotes', 'Most recent notes to show')}
+                  min={1}
+                  max={50}
+                  value={Number(widget.properties?.maxVisible ?? 5)}
+                  onChange={(_, { value }) => {
+                    const n = Number(value);
+                    if (Number.isInteger(n) && n >= 1 && n <= 50) property('maxVisible', n);
+                  }}
+                />
+                <Checkbox
+                  id="notes-show-preview"
+                  labelText={t('showPreview', 'Preview note text in the header')}
+                  checked={widget.properties?.showPreview !== false}
+                  onChange={(_, { checked }) => property('showPreview', checked)}
+                />
+              </>
+            )}
             <Select
               id="loading-policy"
               labelText={t('loadingPolicy', 'Loading policy')}

@@ -105,6 +105,7 @@ export const widgetPropertiesSchema = {
     showReferenceRange: { type: 'boolean' },
     showMissing: { type: 'boolean' },
     maxVisible: { type: 'integer', minimum: 1, maximum: 50 },
+    showPreview: { type: 'boolean' },
     members: {
       type: 'array',
       minItems: 1,

@@ -74,8 +74,9 @@ export function SetHistoryTrendsWidget({
 
   return (
     <div className={styles.tableWrapper}>
+      {/* Widget title sits on its own line, above the Chart/Table switcher. */}
+      <h4 className={styles.widgetTitle}>{title}</h4>
       <div className={styles.chartHeader}>
-        <h4 className={styles.widgetTitle}>{title}</h4>
         <ContentSwitcher
           size="sm"
           selectedIndex={view === 'chart' ? 0 : 1}
@@ -332,8 +333,12 @@ function NumericLineChart({
     if (!points.length) return;
     loadCharts()
       .then(({ LineChart, ScaleTypes }) => {
+        // Carbon's destroy() removes the element it was given, so it must never be a
+        // React-managed node: pass a scratch div inside the React-owned wrapper.
         if (cancelled || !holder.current) return;
-        chart = new LineChart(holder.current, {
+        const scratch = document.createElement('div');
+        holder.current.appendChild(scratch);
+        chart = new LineChart(scratch, {
           data: points.map((point) => ({
             group: groupLabel ?? `${point.member.label}`,
             date: new Date(point.time),

@@ -22,7 +22,7 @@ import {
 } from '../../api/caremodels.resource';
 import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
 import { ConceptSelector } from '../concept-selector.component';
-import { sourceCompatibility } from '../../widgets/widget-registry';
+import { manifestFor, sourceCompatibility } from '../../widgets/widget-registry';
 import { SetSourceBuilder } from './data-source-set-builder.component';
 import { RetrievalSettings, SetMembersTable, isValidSetParent } from './data-source-set-shared.component';
 import styles from './designer.scss';
@@ -403,7 +403,15 @@ function ObservationSourceSettings({
                 ...tab,
                 widgets: tab.widgets.map((widget) =>
                   widget.dataSource === sourceKey
-                    ? { ...widget, properties: { ...widget.properties, unit: patch.units } }
+                    ? {
+                        ...widget,
+                        properties: sourceCompatibility(widget, next) === null &&
+                          (manifestFor(widget)?.configurable.includes('unit') ?? false)
+                          ? { ...widget.properties, unit: patch.units }
+                          : Object.fromEntries(
+                              Object.entries(widget.properties ?? {}).filter(([key]) => key !== 'unit'),
+                            ),
+                      }
                     : widget,
                 ),
               })),

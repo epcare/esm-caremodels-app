@@ -10,6 +10,7 @@ import { TrendChartWidget } from './trend-chart.component';
 import { TimelineWidget } from './timeline.component';
 import { LatestSetResultsWidget } from './latest-set-results.component';
 import { SetHistoryTrendsWidget } from './set-history-trends.component';
+import { NotesListWidget } from './notes-list.component';
 import { CarePlanWidget } from './workspace-descriptors';
 import { RecordWidget } from './record-widget.component';
 import { StaticWidget } from './static-widget.component';
@@ -59,6 +60,7 @@ export function WidgetRenderer({
       'patient-summary',
       'latest-set-results',
       'set-history-trends',
+      'notes-list',
     ].includes(widget.type) &&
     !widget.dataSource &&
     !(widget.type === 'trend-chart' && widget.dataSources?.length)
@@ -93,6 +95,8 @@ export function WidgetRenderer({
       return <LatestSetResultsWidget widget={widget} patientUuid={patientUuid} modelCode={modelCode} tabId={tabId} />;
     case 'set-history-trends':
       return <SetHistoryTrendsWidget widget={widget} patientUuid={patientUuid} modelCode={modelCode} tabId={tabId} />;
+    case 'notes-list':
+      return <NotesListWidget widget={widget} patientUuid={patientUuid} modelCode={modelCode} tabId={tabId} />;
     case 'form-launcher':
       return <FormLauncherWidget widget={widget} patientUuid={patientUuid} />;
     case 'action-panel':

@@ -259,9 +259,13 @@ function CarbonTrendChart({
     // Load chart code only after a selected, visible widget has real numeric results.
     import('@carbon/charts')
       .then(({ LineChart, SimpleBarChart, ScaleTypes }) => {
+        // Carbon's destroy() removes the element it was given, so it must never be a
+        // React-managed node: pass a scratch div inside the React-owned wrapper.
         if (cancelled || !holder.current) return;
+        const scratch = document.createElement('div');
+        holder.current.appendChild(scratch);
         const Chart = chartType === 'bar' ? SimpleBarChart : LineChart;
-        chart = new Chart(holder.current, {
+        chart = new Chart(scratch, {
           data: points.map((point) => ({
             group: point.group ?? title,
             date: new Date(point.time),

@@ -11,6 +11,7 @@ import {
   Stack,
   TextInput,
   Tile,
+  Tag,
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import type { ActionDefinition, ModelDefinition, RuleNode } from '../../types/caremodels';
@@ -81,11 +82,24 @@ export function DataSourcesEditor({ definition, onChange }: EditorProps) {
             {Object.entries(definition.terminology).map(([type, aliases]) => (
               <Tile key={type}>
                 <strong>{type}</strong>
-                {Object.entries(aliases ?? {}).map(([key, uuid]) => (
-                  <p key={key}>
-                    {key}: {uuid}
-                  </p>
-                ))}
+                {Object.entries(aliases ?? {}).map(([key, uuid]) => {
+                  // concept-like bindings must hold exact UUIDs; anything else fails validation
+                  const invalidUuid =
+                    (type === 'concepts' || type === 'codedAnswers') &&
+                    !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$|^[0-9a-fA-F]{32}$|^[0-9A-Za-z]{1,12}A{6,}$/.test(
+                      String(uuid),
+                    );
+                  return (
+                    <p key={key}>
+                      {key}: {String(uuid)}
+                      {invalidUuid && (
+                        <Tag size="sm" type="red">
+                          {t('invalidUuidBinding', 'Not a UUID — replace with the exact concept UUID')}
+                        </Tag>
+                      )}
+                    </p>
+                  );
+                })}
               </Tile>
             ))}
             <p className={styles.sectionHint}>

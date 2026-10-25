@@ -129,10 +129,17 @@ function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | nul
       onEnroll={canEnroll && patientUuid ? () => launchEnrollmentWorkspace(patientUuid) : undefined}
     />
   );
+  // Section title and enrollment actions share one header line; the model selection follows below.
+  const header = (
+    <div className={styles.sectionHeader}>
+      <h3 className={styles.heading}>{t('patientsCareModels', "Patient's Care Models")}</h3>
+      {controls}
+    </div>
+  );
   if (error || refreshFailed) {
     return (
       <>
-        {controls}
+        {header}
         <InlineNotification
           kind={isAuthorizationError(error) ? 'warning' : 'error'}
           lowContrast
@@ -154,7 +161,7 @@ function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | nul
   if (isLoading)
     return (
       <>
-        {controls}
+        {header}
         <SkeletonText aria-label={t('loading', 'Loading…')} />
       </>
     );
@@ -166,7 +173,7 @@ function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | nul
   if (!models.length)
     return (
       <>
-        {controls}
+        {header}
         <InlineNotification
           kind="info"
           lowContrast
@@ -182,7 +189,7 @@ function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | nul
   const selected = models.find((model) => model.modelCode === selectedCode) ?? models[0];
   return (
     <>
-      {controls}
+      {header}
       <ModelCards
         models={models.map((model) => ({
           modelUuid: model.modelUuid,

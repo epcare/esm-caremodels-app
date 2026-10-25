@@ -8,7 +8,7 @@ import { blankDefinition } from './definition';
 
 vi.mock('../concept-selector.component', () => ({
   ConceptSelector: ({ onSelect }) => (
-    <button onClick={() => onSelect({ uuid: 'renal-set-uuid', display: 'Renal Function Panel', datatype: { display: 'N/A' } })}>
+    <button onClick={() => onSelect({ uuid: '1eb05918-f50c-4cad-a827-3c78f296a10a', display: 'Renal Function Panel', datatype: { display: 'N/A' } })}>
       Pick set concept
     </button>
   ),
@@ -71,7 +71,7 @@ it('walks the five-step grouped-set flow and saves an observation-set source wit
       members: ['crea-uuid', 'stage-uuid', 'notes-uuid'],
     }),
   );
-  expect(next.terminology.concepts['renalPanelResults.set']).toBe('renal-set-uuid');
+  expect(next.terminology.concepts['renalPanelResults.set']).toBe('1eb05918-f50c-4cad-a827-3c78f296a10a');
 });
 
 it('offers the grouped-observations category in the general builder', async () => {
@@ -128,4 +128,29 @@ it('hands an N/A valid set selection from the ordinary builder to the grouped fl
   await user.type(screen.getByLabelText('Data source key'), 'viralLoadResults');
   await user.click(screen.getByRole('button', { name: 'Next' }));
   expect(await screen.findByText('Valid set concept: 3 members found.')).toBeInTheDocument();
+});
+
+it('builder writes a real concept UUID for the generalPatientNotes alias', async () => {
+  const user = userEvent.setup();
+  const onSave = vi.fn();
+  render(
+    <FreshCache>
+      <SetSourceBuilder definition={definition} onSave={onSave} />
+    </FreshCache>,
+  );
+  await user.type(screen.getByLabelText('Data source key'), 'generalPatientNotes');
+  await user.type(screen.getByLabelText('Display name'), 'General patient notes');
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Pick set concept' }));
+  await screen.findByText('Valid set concept: 3 members found.');
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.click(screen.getByRole('button', { name: 'Save data source' }));
+  expect(onSave).toHaveBeenCalledTimes(1);
+  const [next] = onSave.mock.calls[0];
+  // the alias maps to the exact concept UUID, never a display name or placeholder
+  expect(next.terminology.concepts['generalPatientNotes.set']).toMatch(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+  );
 });
