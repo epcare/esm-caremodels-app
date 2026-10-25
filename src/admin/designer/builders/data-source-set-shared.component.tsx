@@ -20,9 +20,9 @@ import {
   TextArea,
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import type { OpenmrsConceptSetDetails, OpenmrsSetMember } from '../../api/caremodels.resource';
+import type { OpenmrsConceptSetDetails, OpenmrsSetMember } from '../../../api/caremodels.resource';
 import { validSourceAlias } from './data-source-builder.component';
-import styles from './designer.scss';
+import styles from '../designer.scss';
 
 /**
  * Shared member discovery table for grouped observation sets: lists the parent concept's actual

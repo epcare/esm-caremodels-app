@@ -21,10 +21,10 @@ import {
 import { Add, Edit } from '@carbon/react/icons';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
-import { fetchOpenmrsResource } from '../../api/caremodels.resource';
-import type { DataSourceDefinition, ModelDefinition, RuleNode, RulePredicate } from '../../types/caremodels';
+import { fetchOpenmrsResource } from '../../../api/caremodels.resource';
+import type { DataSourceDefinition, ModelDefinition, RuleNode, RulePredicate } from '../../../types/caremodels';
 import { DataSourceBuilder, SourceSettings } from './data-source-builder.component';
-import styles from './designer.scss';
+import styles from '../designer.scss';
 
 type TerminologyBucket = 'concepts' | 'programs' | 'encounterTypes' | 'forms';
 type SourceCategory = TerminologyBucket | 'other';

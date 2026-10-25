@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { openmrsFetch } from '@openmrs/esm-framework';
 import { widgetManifest } from './widget-registry';
-import { WidgetPreview } from '../admin/designer/widget-preview.component';
+import { WidgetPreview } from '../admin/designer/workspace/widget-preview.component';
 vi.mock('@carbon/charts', () => ({
   LineChart: class {
     destroy() {}

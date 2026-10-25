@@ -13,11 +13,11 @@ import { Draggable, Edit } from '@carbon/react/icons';
 import { WidgetPreview } from './widget-preview.component';
 import { WidgetInspector } from './widget-inspector.component';
 import { ModelPreview } from './model-preview.component';
-import { bindWidgetSource, unavailableWidgets } from '../../widgets/widget-registry';
+import { bindWidgetSource, unavailableWidgets } from '../../../widgets/widget-registry';
 import { useTranslation } from 'react-i18next';
-import type { DefinitionTab, GridPosition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
-import { duplicateWidget, moveItem, reorderWidgets, updateDefinitionTab, widgetManifest } from './definition';
-import styles from './designer.scss';
+import type { DefinitionTab, GridPosition, ModelDefinition, WidgetInstance } from '../../../types/caremodels';
+import { duplicateWidget, moveItem, reorderWidgets, updateDefinitionTab, widgetManifest } from '../model/definition';
+import styles from '../designer.scss';
 
 export function WorkspaceEditor({
   definition,

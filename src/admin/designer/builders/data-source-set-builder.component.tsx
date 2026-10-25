@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Button, InlineNotification, Stack, Tag } from '@carbon/react';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
-import { fetchConceptSetDetails, type OpenmrsConcept } from '../../api/caremodels.resource';
-import type { DataSourceDefinition, ModelDefinition } from '../../types/caremodels';
-import { ConceptSelector } from '../concept-selector.component';
-import { setSourcePreviewFixture } from '../../widgets/widget-registry';
+import { fetchConceptSetDetails, type OpenmrsConcept } from '../../../api/caremodels.resource';
+import type { DataSourceDefinition, ModelDefinition } from '../../../types/caremodels';
+import { ConceptSelector } from '../../concept-selector.component';
+import { setSourcePreviewFixture } from '../../../widgets/widget-registry';
 import { validSourceAlias } from './data-source-builder.component';
 import {
   ConceptSetHint,
@@ -18,7 +18,7 @@ import {
   isValidSourceKey,
   setSourceDefaults,
 } from './data-source-set-shared.component';
-import styles from './designer.scss';
+import styles from '../designer.scss';
 
 const steps = ['identity', 'concept', 'members', 'retrieval', 'validation'] as const;
 

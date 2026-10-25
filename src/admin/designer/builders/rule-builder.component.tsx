@@ -1,10 +1,10 @@
 import React, { useId } from 'react';
 import { Button, NumberInput, Select, SelectItem, Stack, TextInput } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import type { RuleGroup, RuleNode, RulePredicate } from '../../types/caremodels';
-import styles from './designer.scss';
+import type { RuleGroup, RuleNode, RulePredicate } from '../../../types/caremodels';
+import styles from '../designer.scss';
 
-export type { RuleGroup, RuleNode, RulePredicate } from '../../types/caremodels';
+export type { RuleGroup, RuleNode, RulePredicate } from '../../../types/caremodels';
 export function isGroup(node: RuleNode): node is RuleGroup {
   return 'all' in node || 'any' in node || 'not' in node;
 }

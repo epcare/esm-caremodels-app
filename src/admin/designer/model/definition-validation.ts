@@ -5,8 +5,8 @@ import ruleSchema from './schemas/rule-expression.schema.json';
 import formSchema from './schemas/form-ref.schema.json';
 import actionSchema from './schemas/action.schema.json';
 import { parseTree, findNodeAtLocation, printParseErrorCode, type ParseError } from 'jsonc-parser';
-import { widgetPropertyErrors } from '../../widgets/widget-properties';
-import type { ModelDefinition } from '../../types/caremodels';
+import { widgetPropertyErrors } from '../../../widgets/widget-properties';
+import type { ModelDefinition } from '../../../types/caremodels';
 
 // Exact copies of the module's schemas. Backend semantic/resource validation is still required.
 const ajv = new Ajv({ allErrors: true, strict: false });

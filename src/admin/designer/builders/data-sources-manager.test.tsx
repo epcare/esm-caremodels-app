@@ -7,11 +7,11 @@ import {
   sourceCategory,
   sourceResource,
 } from './data-sources-manager.component';
-import { blankDefinition } from './definition';
-import type { ModelDefinition } from '../../types/caremodels';
-import type { OpenmrsChoice } from '../../api/caremodels.resource';
+import { blankDefinition } from '../model/definition';
+import type { ModelDefinition } from '../../../types/caremodels';
+import type { OpenmrsChoice } from '../../../api/caremodels.resource';
 
-vi.mock('../../api/caremodels.resource', async (importOriginal) => ({
+vi.mock('../../../api/caremodels.resource', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchOpenmrsResource: vi.fn(async (_resource: string, uuid: string) => ({ uuid, display: 'ART start date' })),
   fetchConceptDetails: vi.fn(async (uuid: string) => ({
@@ -21,7 +21,7 @@ vi.mock('../../api/caremodels.resource', async (importOriginal) => ({
   })),
 }));
 
-vi.mock('../concept-selector.component', () => ({
+vi.mock('../../concept-selector.component', () => ({
   ConceptSelector: ({ onSelect }: { onSelect: (choice: OpenmrsChoice) => void }) => (
     <button
       onClick={() =>

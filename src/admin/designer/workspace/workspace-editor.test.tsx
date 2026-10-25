@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { openmrsFetch } from '@openmrs/esm-framework';
 import { WorkspaceEditor } from './workspace-editor.component';
-import { parseDefinitionJson } from './definition-validation';
-import { blankDefinition } from './definition';
+import { parseDefinitionJson } from '../model/definition-validation';
+import { blankDefinition } from '../model/definition';
 
 function Editor() {
   const initial = blankDefinition();
@@ -86,7 +86,7 @@ it('uses shared realistic previews with no clinical API calls and exposes inspec
   expect(definition.workspace.tabs[0].widgets[0]).not.toHaveProperty('dataSource');
 });
 
-vi.mock('../concept-selector.component', () => ({
+vi.mock('../../concept-selector.component', () => ({
   ConceptSelector: ({ onSelect }) => (
     <button
       onClick={() =>

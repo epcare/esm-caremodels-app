@@ -2,9 +2,9 @@ import React from 'react';
 import userEvent from '@testing-library/user-event';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { DataSourceBuilder, SourceSettings } from './data-source-builder.component';
-import { blankDefinition } from './definition';
+import { blankDefinition } from '../model/definition';
 
-vi.mock('../concept-selector.component', () => ({
+vi.mock('../../concept-selector.component', () => ({
   ConceptSelector: ({ onSelect }) => (
     <>
       <button

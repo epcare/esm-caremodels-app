@@ -1,5 +1,5 @@
 import { hivUpdate } from './hiv-workspace-update.fixture';
-import { parseDefinitionJson } from '../admin/designer/definition-validation';
+import { parseDefinitionJson } from '../admin/designer/model/definition-validation';
 import { mergeWorkspaceUpdate } from './merge-workspace-update.mjs';
 import type { ModelDefinition } from '../types/caremodels';
 

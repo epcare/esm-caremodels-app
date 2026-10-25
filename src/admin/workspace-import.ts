@@ -1,7 +1,7 @@
 import { fetchEnvelope, fetchModel, fetchForms, saveDraft, validateDefinition } from '../api/caremodels.resource';
 import { parseEnvelope } from '../api/contract';
 import { mergeWorkspaceUpdate } from '../configuration/merge-workspace-update.mjs';
-import { parseDefinitionJson } from './designer/definition-validation';
+import { parseDefinitionJson } from './designer/model/definition-validation';
 import { widgetBindingErrors } from '../widgets/widget-registry';
 
 /** Existing-model workspace update: never use the backend's create-only envelope import. */

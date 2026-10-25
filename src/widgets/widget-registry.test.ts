@@ -1,5 +1,5 @@
 import { manifestFor, sourceCompatibility, widgetBindingErrors, widgetManifest } from './widget-registry';
-import { blankDefinition } from '../admin/designer/definition';
+import { blankDefinition } from '../admin/designer/model/definition';
 
 it('registers supported widgets with dimensions, properties and preview fixtures', () => {
   for (const manifest of widgetManifest) {

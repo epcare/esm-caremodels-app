@@ -14,12 +14,12 @@ import {
   Tag,
 } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import type { ActionDefinition, ModelDefinition, RuleNode } from '../../types/caremodels';
-import type { OpenmrsForm } from '../../api/caremodels.resource';
-import { FormMultiSelector, ResourceSelector } from '../resource-selector.component';
-import { DataSourcesManager } from './data-sources-manager.component';
-import { RuleBuilder, emptyGroup } from './rule-builder.component';
-import styles from './designer.scss';
+import type { ActionDefinition, ModelDefinition, RuleNode } from '../../../types/caremodels';
+import type { OpenmrsForm } from '../../../api/caremodels.resource';
+import { FormMultiSelector, ResourceSelector } from '../../resource-selector.component';
+import { DataSourcesManager } from '../builders/data-sources-manager.component';
+import { RuleBuilder, emptyGroup } from '../builders/rule-builder.component';
+import styles from '../designer.scss';
 
 type EditorProps = { definition: ModelDefinition; onChange: (next: ModelDefinition) => void };
 const validAlias = (value: string) => /^[a-z][a-zA-Z0-9._-]{0,99}$/.test(value);

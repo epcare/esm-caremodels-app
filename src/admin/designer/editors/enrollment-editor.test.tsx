@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { hivUpdate as update } from '../../configuration/hiv-workspace-update.fixture';
-import type { ModelDefinition } from '../../types/caremodels';
+import { hivUpdate as update } from '../../../configuration/hiv-workspace-update.fixture';
+import type { ModelDefinition } from '../../../types/caremodels';
 import { EnrollmentEditor } from './configuration-editors.component';
 
 it('writes a declared typed encounter alias rather than a UUID in the generic alias field', () => {

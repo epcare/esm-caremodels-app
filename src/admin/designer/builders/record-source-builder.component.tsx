@@ -12,10 +12,10 @@ import {
 } from '@carbon/react';
 import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
-import { searchOpenmrsResources, type OpenmrsChoice } from '../../api/caremodels.resource';
-import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
-import { ConceptSelector } from '../concept-selector.component';
-import { sourceCompatibility } from '../../widgets/widget-registry';
+import { searchOpenmrsResources, type OpenmrsChoice } from '../../../api/caremodels.resource';
+import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../../types/caremodels';
+import { ConceptSelector } from '../../concept-selector.component';
+import { sourceCompatibility } from '../../../widgets/widget-registry';
 
 export function RecordSourceBuilder({
   definition,

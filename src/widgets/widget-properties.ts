@@ -1,5 +1,5 @@
 import Ajv from 'ajv';
-import modelSchema from '../admin/designer/schemas/model-definition.schema.json';
+import modelSchema from '../admin/designer/model/schemas/model-definition.schema.json';
 import type { WidgetInstance } from '../types/caremodels';
 
 export const observationFields = ['value', 'effectiveTime', 'valueType', 'obsUuid'] as const;

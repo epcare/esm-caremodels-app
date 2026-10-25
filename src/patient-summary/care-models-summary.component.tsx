@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { SWRConfig } from 'swr';
 import { usePatientUuid } from '../utils/use-patient-uuid';
 import { Button, InlineNotification, SkeletonText } from '@carbon/react';
-import { showSnackbar } from '@openmrs/esm-framework';
 import {
   hasEnrollmentPrivilege,
   hasMasterPrivilege,
@@ -88,7 +87,6 @@ export default function CareModelsPatientSummary({ patientUuid: providedUuid }: 
 function CareModelsBoard({ patientUuid, canEnroll }: { patientUuid: string | null; canEnroll: boolean }) {
   const { t } = useTranslation();
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
-  const [enrolling, setEnrolling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
   const {

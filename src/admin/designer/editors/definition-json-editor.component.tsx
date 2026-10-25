@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, InlineLoading, InlineNotification, Stack } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import type { Ace } from 'ace-builds';
-import styles from './designer.scss';
+import styles from '../designer.scss';
 
 /** JSON-only Ace loaded on demand; no workers, language bundles or external asset requests. */
 export function DefinitionJsonEditor({

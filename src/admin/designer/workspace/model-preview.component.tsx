@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Dropdown, InlineNotification, Stack, Tile } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
 import { WidgetPreview } from './widget-preview.component';
-import type { ModelDefinition } from '../../types/caremodels';
-import styles from './designer.scss';
+import type { ModelDefinition } from '../../../types/caremodels';
+import styles from '../designer.scss';
 
 export function ModelPreview({ definition }: { definition: ModelDefinition }) {
   const { t } = useTranslation();

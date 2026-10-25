@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { openmrsFetch } from '@openmrs/esm-framework';
 import { FormsEditor } from './configuration-editors.component';
-import { blankDefinition } from './definition';
+import { blankDefinition } from '../model/definition';
 
 const form = { name: 'Follow-up', encounterType: null, published: true, retired: false, resources: [] };
 function Editor() {

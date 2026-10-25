@@ -27,6 +27,7 @@ import {
 import { Add, Copy, Download, Edit, Group, Pause, Play, Upload } from '@carbon/react/icons';
 import { UserHasAccess } from '@openmrs/esm-framework';
 import { changeModelStatus, duplicateModel, fetchEnvelope, importModel, useRegistry } from '../api/caremodels.resource';
+import { manageModelPrivilege } from '../constants';
 import { importWorkspaceDraft } from './workspace-import';
 import { parseEnvelope } from '../api/contract';
 import { careModelAdminUrl, navigateToCareModelAdmin } from '../utils/care-model-navigation';
@@ -41,7 +42,7 @@ const modelStatus = (model: RegistryModel) => (model.retired ? 'RETIRED' : model
 
 export default function CareModelsAdminHome() {
   return (
-    <UserHasAccess privilege="Task: caremodels.model.manage">
+    <UserHasAccess privilege={manageModelPrivilege}>
       <Registry />
     </UserHasAccess>
   );

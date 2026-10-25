@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Button, FileUploaderButton, InlineNotification, Stack } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import type { ModelDefinition } from '../../types/caremodels';
-import { fetchForms, type OpenmrsForm } from '../../api/caremodels.resource';
-import { mergeWorkspaceUpdate } from '../../configuration/merge-workspace-update.mjs';
-import { parseDefinitionJson } from './definition-validation';
-import { widgetBindingErrors } from '../../widgets/widget-registry';
+import type { ModelDefinition } from '../../../types/caremodels';
+import { fetchForms, type OpenmrsForm } from '../../../api/caremodels.resource';
+import { mergeWorkspaceUpdate } from '../../../configuration/merge-workspace-update.mjs';
+import { parseDefinitionJson } from '../model/definition-validation';
+import { widgetBindingErrors } from '../../../widgets/widget-registry';
 
 /** Imports into the current draft, never into the new-model registry import operation. */
 export function WorkspaceDefinitionImport({

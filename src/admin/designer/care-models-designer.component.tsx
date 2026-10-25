@@ -31,6 +31,7 @@ import {
   validateDefinition,
 } from '../../api/caremodels.resource';
 import { parseEnvelope } from '../../api/contract';
+import { manageModelPrivilege, masterPrivilege, publishModelPrivilege } from '../../constants';
 import {
   careModelAdminUrl,
   getModelCodeFromLocation,
@@ -38,20 +39,20 @@ import {
 } from '../../utils/care-model-navigation';
 import type { ModelDefinition } from '../../types/caremodels';
 import { PrivilegeSelector } from '../privilege-selector.component';
-import { blankDefinition, nextVersion } from './definition';
-import { WorkspaceEditor } from './workspace-editor.component';
+import { blankDefinition, nextVersion } from './model/definition';
+import { WorkspaceEditor } from './workspace/workspace-editor.component';
 import {
   ActionsEditor,
   DataSourcesEditor,
   EnrollmentEditor,
   FormsEditor,
   PathwayEditor,
-} from './configuration-editors.component';
-import { WorkspaceDefinitionImport } from './workspace-definition-import.component';
-import { DefinitionJsonEditor } from './definition-json-editor.component';
-import { ModelPreview } from './model-preview.component';
+} from './editors/configuration-editors.component';
+import { WorkspaceDefinitionImport } from './editors/workspace-definition-import.component';
+import { DefinitionJsonEditor } from './editors/definition-json-editor.component';
+import { ModelPreview } from './workspace/model-preview.component';
 import { widgetBindingErrors } from '../../widgets/widget-registry';
-import { parseDefinitionJson } from './definition-validation';
+import { parseDefinitionJson } from './model/definition-validation';
 import styles from './designer.scss';
 
 const sectionLabels = [
@@ -97,7 +98,7 @@ function subscribe(onChange: () => void) {
 export default function CareModelsDesigner() {
   const modelCode = useSyncExternalStore(subscribe, getModelCodeFromLocation);
   return (
-    <UserHasAccess privilege="Task: caremodels.model.manage">
+    <UserHasAccess privilege={manageModelPrivilege}>
       <ModelEditor key={modelCode ?? 'new'} modelCode={modelCode} />
     </UserHasAccess>
   );
@@ -232,7 +233,7 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
       throw new Error(t('resolveJsonBeforeSave', 'Resolve or reset the invalid JSON changes before saving.'));
     if (code.trim() === 'new')
       throw new Error(t('reservedCode', 'The code new is reserved for model creation. Choose another code.'));
-    if (!code.trim() || !name.trim() || !privilege || privilege === 'View Care Models')
+    if (!code.trim() || !name.trim() || !privilege || privilege === masterPrivilege)
       throw new Error(
         t('requiredModelIdentity', 'A code, name, and distinct registered viewing privilege are required.'),
       );
@@ -371,7 +372,7 @@ export function ModelEditor({ modelCode }: { modelCode: string | null }) {
           <Button onClick={() => void save()} disabled={status !== 'idle' || invalidJson}>
             {status === 'saving' ? t('saving', 'Saving…') : t('saveDraft', 'Save draft')}
           </Button>
-          <UserHasAccess privilege="Task: caremodels.model.publish">
+          <UserHasAccess privilege={publishModelPrivilege}>
             <Button
               onClick={() => setPublishDialog(true)}
               disabled={

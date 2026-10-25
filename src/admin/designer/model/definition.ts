@@ -1,6 +1,6 @@
-import type { DefinitionTab, ModelDefinition, WidgetInstance } from '../../types/caremodels';
+import type { DefinitionTab, ModelDefinition, WidgetInstance } from '../../../types/caremodels';
 
-export { widgetManifest } from '../../widgets/widget-registry';
+export { widgetManifest } from '../../../widgets/widget-registry';
 export function blankDefinition(): ModelDefinition {
   return {
     schemaVersion: '1.0.0',

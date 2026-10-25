@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { RuleBuilder } from './rule-builder.component';
-import type { RuleNode } from '../../types/caremodels';
+import type { RuleNode } from '../../../types/caremodels';
 
 function Editor({ initial }: { initial: RuleNode }) {
   const [node, setNode] = useState(initial);

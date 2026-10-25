@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { navigate } from '@openmrs/esm-framework';
 import { ModelEditor } from './care-models-designer.component';
 import * as api from '../../api/caremodels.resource';
-import { blankDefinition } from './definition';
+import { blankDefinition } from './model/definition';
 
 vi.mock('../../api/caremodels.resource', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../api/caremodels.resource')>()),
@@ -92,7 +92,7 @@ it('blocks editing when the existing draft fails to load', async () => {
 });
 
 // Model state tests use an accessible editor double; Ace lifecycle is tested separately.
-vi.mock('./definition-json-editor.component', () => ({
+vi.mock('./editors/definition-json-editor.component', () => ({
   DefinitionJsonEditor: ({ value, onChange, onDiscard, errors }) => (
     <>
       <textarea aria-label="Definition JSON" value={value} onChange={(event) => onChange(event.target.value)} />
@@ -218,7 +218,7 @@ it('blocks incompatible widget bindings before backend validation or publication
   render(<ModelEditor modelCode="test" />);
   await screen.findByLabelText('Patient display label');
   fireEvent.click(screen.getByRole('button', { name: 'Validate', exact: true }));
-  await screen.findByText(/workspace.tabs\[0\].widgets\[0\].dataSource/);
+  await screen.findByText(/workspace.tabs\[0].widgets\[0].dataSource/);
   expect(api.validateDefinition).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Publish', exact: true })).toBeDisabled();
 });

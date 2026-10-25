@@ -1,8 +1,8 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { RecordSourceBuilder } from './record-source-builder.component';
-import { blankDefinition } from './definition';
-import { parseDefinitionJson } from './definition-validation';
+import { blankDefinition } from '../model/definition';
+import { parseDefinitionJson } from '../model/definition-validation';
 it('creates a versioned conditions source and persists a compatible widget', () => {
   const definition = blankDefinition();
   definition.metadata.display.label = 'Example model';

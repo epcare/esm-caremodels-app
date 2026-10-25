@@ -1,0 +1,22 @@
+--- a/omod/src/main/java/org/openmrs/module/caremodels/web/resource/ModelResource.java
++++ b/omod/src/main/java/org/openmrs/module/caremodels/web/resource/ModelResource.java
+@@ -73,11 +73,18 @@
+ 		return model;
+ 	}
+ 	
++	/** Custom query parameters use RESTWS search dispatch, not getAll. */
++	@Override
++	protected PageableResult doSearch(RequestContext context) {
++		return doGetAll(context);
++	}
++	
+ 	@Override
+ 	protected PageableResult doGetAll(RequestContext context) throws ResponseException {
+ 		String q = trimToNull(context.getParameter("q"));
+ 		String statusParam = trimToNull(context.getParameter("status"));
+-		boolean includeRetired = Boolean.parseBoolean(context.getParameter("includeRetired"));
++		boolean includeRetired = Boolean.parseBoolean(context.getParameter("includeRetired"))
++		        || Boolean.parseBoolean(context.getParameter("includeAll"));
+ 		
+ 		CareModelStatus status = null;
+ 		if (statusParam != null) {

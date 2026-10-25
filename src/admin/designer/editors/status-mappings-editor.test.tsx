@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { StatusMappingsEditor } from './status-mappings-editor.component';
-import { blankDefinition } from './definition';
-import type { WidgetInstance } from '../../types/caremodels';
+import { blankDefinition } from '../model/definition';
+import type { WidgetInstance } from '../../../types/caremodels';
 
 it('uses exact bound coded answers and validates mapping labels before adding', () => {
   const definition = blankDefinition();

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { openmrsFetch } from '@openmrs/esm-framework';
 import { ModelPreview } from './model-preview.component';
-import { blankDefinition } from './definition';
+import { blankDefinition } from '../model/definition';
 
 it('renders registered widgets with synthetic results and sends no clinical requests', async () => {
   const definition = blankDefinition();

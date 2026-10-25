@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Select, SelectItem, Stack, TextInput } from '@carbon/react';
 import { useTranslation } from 'react-i18next';
-import type { ModelDefinition, WidgetInstance } from '../../types/caremodels';
-import { tagTones, type StatusMapping } from '../../widgets/widget-properties';
+import type { ModelDefinition, WidgetInstance } from '../../../types/caremodels';
+import { tagTones, type StatusMapping } from '../../../widgets/widget-properties';
 
 export function StatusMappingsEditor({
   widget,

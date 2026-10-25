@@ -1,0 +1,94 @@
+--- a/omod/src/main/java/org/openmrs/module/caremodels/web/resource/ModelOperationResource.java
++++ b/omod/src/main/java/org/openmrs/module/caremodels/web/resource/ModelOperationResource.java
+@@ -153,6 +153,24 @@
+ 	}
+ 	
+ 	@Override
++	public DelegatingResourceDescription getCreatableProperties() {
++		DelegatingResourceDescription description = new DelegatingResourceDescription();
++		description.addRequiredProperty("operation");
++		description.addProperty("code");
++		description.addProperty("name");
++		description.addProperty("description");
++		description.addProperty("privilege");
++		description.addProperty("definition");
++		description.addProperty("envelope");
++		description.addProperty("expectedRevision");
++		description.addProperty("version");
++		description.addProperty("sourceCode");
++		description.addProperty("newCode");
++		description.addProperty("newName");
++		return description;
++	}
++	
++	@Override
+ 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
+ 		// request/response fields mirror the delegate's properties
+ 		DelegatingResourceDescription description = new DelegatingResourceDescription();
+--- a/omod/src/main/java/org/openmrs/module/caremodels/web/resource/DataRequestResource.java
++++ b/omod/src/main/java/org/openmrs/module/caremodels/web/resource/DataRequestResource.java
+@@ -132,6 +132,16 @@
+ 	}
+ 	
+ 	@Override
++	public DelegatingResourceDescription getCreatableProperties() {
++		DelegatingResourceDescription description = new DelegatingResourceDescription();
++		description.addRequiredProperty("patient");
++		description.addRequiredProperty("model");
++		description.addRequiredProperty("tab");
++		description.addRequiredProperty("dataSource");
++		return description;
++	}
++	
++	@Override
+ 	public DelegatingResourceDescription getRepresentationDescription(Representation representation) {
+ 		DelegatingResourceDescription description = new DelegatingResourceDescription();
+ 		description.addProperty("patient");
+--- a/omod/src/main/java/org/openmrs/module/caremodels/web/resource/ModelResource.java
++++ b/omod/src/main/java/org/openmrs/module/caremodels/web/resource/ModelResource.java
+@@ -22,7 +22,7 @@
+ import org.openmrs.module.webservices.rest.web.resource.api.PageableResult;
+ import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingCrudResource;
+ import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingResourceDescription;
+-import org.openmrs.module.webservices.rest.web.resource.impl.NeedsPaging;
++import org.openmrs.module.webservices.rest.web.resource.impl.AlreadyPaged;
+ import org.openmrs.module.webservices.rest.web.response.ResponseException;
+ 
+ /**
+@@ -85,7 +85,9 @@
+ 		}
+ 		List<CareModel> models = service().getCareModels(q, status, includeRetired, context.getStartIndex(),
+ 		    context.getLimit());
+-		return new NeedsPaging<CareModel>(models, context);
++		long total = service().getCareModelsCount(q, status, includeRetired);
++		return new AlreadyPaged<CareModel>(context, models,
++		    (long) context.getStartIndex() + models.size() < total, total);
+ 	}
+ 	
+ 	@Override
+@@ -96,6 +98,15 @@
+ 	@Override
+ 	public void purge(CareModel delegate, RequestContext context) throws ResponseException {
+ 		service().purgeCareModel(delegate);
++	}
++	
++	@Override
++	public DelegatingResourceDescription getUpdatableProperties() {
++		DelegatingResourceDescription description = new DelegatingResourceDescription();
++		description.addProperty("name");
++		description.addProperty("description");
++		description.addProperty("privilege");
++		return description;
+ 	}
+ 	
+ 	@Override
+--- a/omod/src/main/java/org/openmrs/module/caremodels/web/resource/WorkspaceResource.java
++++ b/omod/src/main/java/org/openmrs/module/caremodels/web/resource/WorkspaceResource.java
+@@ -119,6 +119,7 @@
+ 		if (representation instanceof DefaultRepresentation) {
+ 			description.addProperty("widgets");
+ 			description.addProperty("layouts");
++			description.addProperty("tabs");
+ 		}
+ 		return description;
+ 	}

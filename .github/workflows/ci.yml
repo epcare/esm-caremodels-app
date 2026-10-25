@@ -1,4 +1,4 @@
-name: ePCare CI
+name: Care Models CI
 
 on:
   push:

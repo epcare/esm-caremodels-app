@@ -1,11 +1,11 @@
 import React from 'react';
-import { fetchForms } from '../../api/caremodels.resource';
-vi.mock('../../api/caremodels.resource', async (original) => ({ ...(await original<object>()), fetchForms: vi.fn() }));
+import { fetchForms } from '../../../api/caremodels.resource';
+vi.mock('../../../api/caremodels.resource', async (original) => ({ ...(await original<object>()), fetchForms: vi.fn() }));
 beforeEach(() => vi.mocked(fetchForms).mockResolvedValue([]));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { WorkspaceDefinitionImport } from './workspace-definition-import.component';
-import { hivUpdate as update } from '../../configuration/hiv-workspace-update.fixture';
-import type { ModelDefinition } from '../../types/caremodels';
+import { hivUpdate as update } from '../../../configuration/hiv-workspace-update.fixture';
+import type { ModelDefinition } from '../../../types/caremodels';
 function fileOf(text: string) {
   const file = new File([text], 'hiv-workspace.json', { type: 'application/json' });
   Object.defineProperty(file, 'text', { value: async () => text });

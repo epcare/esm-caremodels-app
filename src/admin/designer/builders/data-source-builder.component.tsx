@@ -19,13 +19,13 @@ import {
   type OpenmrsChoice,
   type OpenmrsConcept,
   type OpenmrsConceptSetDetails,
-} from '../../api/caremodels.resource';
-import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../types/caremodels';
-import { ConceptSelector } from '../concept-selector.component';
-import { manifestFor, sourceCompatibility } from '../../widgets/widget-registry';
+} from '../../../api/caremodels.resource';
+import type { DataSourceDefinition, ModelDefinition, WidgetInstance } from '../../../types/caremodels';
+import { ConceptSelector } from '../../concept-selector.component';
+import { manifestFor, sourceCompatibility } from '../../../widgets/widget-registry';
 import { SetSourceBuilder } from './data-source-set-builder.component';
 import { RetrievalSettings, SetMembersTable, isValidSetParent } from './data-source-set-shared.component';
-import styles from './designer.scss';
+import styles from '../designer.scss';
 
 export const validSourceAlias = (value: string) => /^[a-z][a-zA-Z0-9._-]{0,99}$/.test(value);
 export function conceptResultType(concept?: OpenmrsConcept): DataSourceDefinition['resultType'] | undefined {

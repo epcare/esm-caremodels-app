@@ -1,7 +1,7 @@
 {
   "name": "@epcare/esm-caremodels-app",
   "version": "1.0.0",
-  "description": "Care Models microfrontend for the ePCare frontend: enrolled-only patient care model tabs and workspace, backed by openmrs-module-caremodels",
+  "description": "Distribution-agnostic Care Models microfrontend: enrolled-only patient care model tabs and workspace, backed by openmrs-module-caremodels",
   "browser": "dist/esm-caremodels-app.js",
   "main": "src/index.ts",
   "source": true,
@@ -11,7 +11,6 @@
   "license": "MPL-2.0",
   "keywords": [
     "openmrs",
-    "ugandaemr",
     "caremodels"
   ],
   "scripts": {
@@ -63,7 +62,7 @@
     "browserslist-config-openmrs": "^1.0.1",
     "dayjs": "^1.11.6",
     "eslint": "^9.39.0",
-    "happy-dom": "^20.0.0",
+    "happy-dom": "^21.0.4",
     "i18next": "^25.0.0",
     "i18next-parser": "^9.3.0",
     "identity-obj-proxy": "^3.0.0",

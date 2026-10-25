@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { DataSourceBuilder } from './data-source-builder.component';
 import { SetSourceBuilder, } from './data-source-set-builder.component';
-import { blankDefinition } from './definition';
+import { blankDefinition } from '../model/definition';
 
-vi.mock('../concept-selector.component', () => ({
+vi.mock('../../concept-selector.component', () => ({
   ConceptSelector: ({ onSelect }) => (
     <button onClick={() => onSelect({ uuid: '1eb05918-f50c-4cad-a827-3c78f296a10a', display: 'Renal Function Panel', datatype: { display: 'N/A' } })}>
       Pick set concept
@@ -14,7 +14,7 @@ vi.mock('../concept-selector.component', () => ({
   ),
 }));
 
-vi.mock('../../api/caremodels.resource', async (importOriginal) => ({
+vi.mock('../../../api/caremodels.resource', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchConceptSetDetails: vi.fn().mockResolvedValue({
     uuid: 'renal-set-uuid',
